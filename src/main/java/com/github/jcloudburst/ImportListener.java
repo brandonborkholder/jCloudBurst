@@ -1,4 +1,4 @@
-package anon;
+package com.github.jcloudburst;
 
 public interface ImportListener {
   void totalRowsToBeProcessed(int count);

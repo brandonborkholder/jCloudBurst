@@ -1,4 +1,4 @@
-package anon;
+package com.github.jcloudburst;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,9 +13,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
-
-import org.example.mappingconfig.ColumnMapType;
-import org.example.mappingconfig.ConfigurationType;
 
 public class RowHandler {
   protected PreparedStatement stmt;

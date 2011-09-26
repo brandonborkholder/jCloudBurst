@@ -1,4 +1,4 @@
-package anon;
+package com.github.jcloudburst;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,8 +8,6 @@ import java.sql.SQLException;
 import java.text.ParseException;
 
 import javax.xml.bind.JAXB;
-
-import org.example.mappingconfig.ConfigurationType;
 
 public class JDBCImport {
   private ConfigurationType config;

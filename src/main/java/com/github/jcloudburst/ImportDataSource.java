@@ -1,4 +1,4 @@
-package anon;
+package com.github.jcloudburst;
 
 import java.io.IOException;
 import java.sql.SQLException;
