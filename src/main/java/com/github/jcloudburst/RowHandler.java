@@ -1,5 +1,6 @@
 package com.github.jcloudburst;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,15 +13,17 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-import java.util.ListIterator;
 
 public class RowHandler {
   protected PreparedStatement stmt;
 
   protected SQLType[] types;
+
   protected int[] sqlTypes;
 
   protected List<ColumnMapType> maps;
+
+  protected File file;
 
   protected enum SQLType {
     String,
@@ -30,7 +33,8 @@ public class RowHandler {
     Numeric,
   }
 
-  public RowHandler(ConfigurationType config, Connection connection) throws SQLException {
+  public RowHandler(ConfigurationType config, File file, Connection connection) throws SQLException {
+    this.file = file;
     maps = config.getMapping().getColumn();
     types = new SQLType[maps.size()];
     sqlTypes = new int[maps.size()];
@@ -54,12 +58,8 @@ public class RowHandler {
     typesStatement.close();
   }
 
-  public boolean doSkipFileColumn(String fileColumnName) {
-    return lookupFileColumnIndex(fileColumnName) == -1;
-  }
-
-  protected SQLType getSQLType(String fileColumn) {
-    return types[lookupFileColumnIndex(fileColumn)];
+  protected SQLType getSQLType(int columnId) {
+    return types[columnId];
   }
 
   protected SQLType mapSQLTypes(int columnType) {
@@ -132,51 +132,15 @@ public class RowHandler {
     return builder.toString();
   }
 
-  public void setValue(String fileColumnName, String value) throws SQLException, ParseException {
-    setDbValue(lookupFileColumnIndex(fileColumnName), value);
+  public void setValue(int columnId, String value) throws SQLException {
+    setDbValue(columnId, value);
   }
 
-  public void setValue(String fileColumnName, Date value) throws SQLException, ParseException {
-    setDbValue(lookupFileColumnIndex(fileColumnName), value);
+  public void setValue(int columnId, Date value) throws SQLException {
+    setDbValue(columnId, value);
   }
 
-  protected int lookupFileColumnIndex(String name) {
-    ListIterator<ColumnMapType> mapItr = maps.listIterator();
-    while (mapItr.hasNext()) {
-      ColumnMapType map = mapItr.next();
-      if (name.equalsIgnoreCase(map.getFileColName())) {
-        return mapItr.previousIndex();
-      }
-    }
-
-    return -1;
-  }
-
-  protected int lookupDbColumnIndex(String name) {
-    ListIterator<ColumnMapType> mapItr = maps.listIterator();
-    while (mapItr.hasNext()) {
-      ColumnMapType map = mapItr.next();
-      if (name.equalsIgnoreCase(map.getDbColumn())) {
-        return mapItr.previousIndex();
-      }
-    }
-
-    return -1;
-  }
-
-  public void setValue(int fileColumnIndex, String value) throws SQLException, ParseException {
-    ListIterator<ColumnMapType> mapItr = maps.listIterator();
-    while (mapItr.hasNext()) {
-      ColumnMapType map = mapItr.next();
-      if (fileColumnIndex == map.getFileColIndex()) {
-        setDbValue(mapItr.previousIndex(), value);
-      }
-    }
-
-    throw new IllegalArgumentException("No such file column index: " + fileColumnIndex);
-  }
-
-  protected void setDbValue(int dbColumnIndex, String value) throws SQLException, ParseException {
+  protected void setDbValue(int dbColumnIndex, String value) throws SQLException {
     if (value == null || value.isEmpty()) {
       stmt.setNull(dbColumnIndex + 1, sqlTypes[dbColumnIndex]);
       return;
@@ -214,15 +178,35 @@ public class RowHandler {
     }
   }
 
-  protected void fillFixedValues() throws SQLException, ParseException {
+  protected void fillVariableValues() throws SQLException {
+    int colId = 0;
+    for (ColumnMapType map : maps) {
+      if (map.getVariable() != null) {
+        if (map.getVariable().equalsIgnoreCase("$file")) {
+          setDbValue(colId, file.getName());
+        }
+      }
+      colId++;
+    }
+  }
+
+  protected void fillFixedValues() throws SQLException {
+    int colId = 0;
     for (ColumnMapType map : maps) {
       if (map.getFixedValue() != null) {
-        setDbValue(lookupDbColumnIndex(map.getDbColumn()), map.getFixedValue());
+        setDbValue(colId, map.getFixedValue());
       }
+      colId++;
     }
   }
 
   public void nextRow() throws SQLException {
+    fillVariableValues();
+    fillFixedValues();
     stmt.execute();
+  }
+
+  public void close() throws SQLException {
+    stmt.close();
   }
 }

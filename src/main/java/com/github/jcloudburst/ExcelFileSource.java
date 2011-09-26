@@ -1,11 +1,9 @@
 package com.github.jcloudburst;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -14,64 +12,90 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.github.jcloudburst.RowHandler.SQLType;
 
-
 public class ExcelFileSource implements ImportDataSource {
   protected Sheet activeSheet;
 
-  protected List<String> columnNames;
-
   protected Iterator<Row> rowIterator;
 
-  public ExcelFileSource(ConfigurationType config) throws IOException {
-    XSSFWorkbook workbook = new XSSFWorkbook(config.getFile());
-    activeSheet = workbook.getSheet(config.getExcelSheet());
+  protected ColumnMapper mapper;
+
+  public ExcelFileSource(File workbookFile, String worksheet, ConfigurationType config, ColumnMapper mapper) throws IOException {
+    this.mapper = mapper;
+
+    XSSFWorkbook workbook = new XSSFWorkbook(workbookFile.getAbsolutePath());
+    activeSheet = workbook.getSheet(worksheet);
     rowIterator = activeSheet.iterator();
-    columnNames = getColumnNames(config);
+
+    initializeMapper(config);
   }
 
-  protected List<String> getColumnNames(ConfigurationType config) {
-    List<String> names = new ArrayList<String>();
-
-    Row row = rowIterator.next();
-    int lastCell = row.getLastCellNum();
-    for (int i = 0; i < lastCell; i++) {
-      Cell cell = row.getCell(i);
-      if (cell == null) {
-        names.add(null);
-      } else {
-        names.add(cell.getStringCellValue());
-      }
+  protected void initializeMapper(ConfigurationType config) {
+    Row row = null;
+    if (config.isHasHeaderRow()) {
+      row = rowIterator.next();
     }
 
-    return names;
-  }
+    for (int colId = 0; colId < mapper.numColumns(); colId++) {
+      if (!mapper.isColumnDefined(colId)) {
+        if (row == null) {
+          throw new IllegalArgumentException("No header row specified and no file column index specified for column " + colId);
+        }
 
-  protected String getName(int index) {
-    return columnNames.get(index);
+        int fileColIndex = -1;
+        String fileColName = mapper.getFileColumnName(colId);
+        int lastCell = row.getLastCellNum();
+
+        for (int i = 0; i < lastCell; i++) {
+          Cell cell = row.getCell(i);
+          if (cell != null) {
+            String cellValue = cell.getStringCellValue();
+            if (fileColName.equalsIgnoreCase(cellValue)) {
+              fileColIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (fileColIndex < 0) {
+          throw new IllegalArgumentException("No file column index specified for column " + colId +
+              " and no corresponding column named '" + fileColName + "'");
+        } else {
+          mapper.setFileColumnIndex(colId, fileColIndex);
+        }
+      }
+    }
   }
 
   @Override
-  public void fillRow(RowHandler handler) throws SQLException, IOException, ParseException {
+  public void fillRow(RowHandler handler) throws SQLException, IOException {
     Row row = rowIterator.next();
+    int totalColumns = mapper.numColumns();
 
-    int lastCell = row.getLastCellNum();
-    for (int i = 0; i < lastCell; i++) {
-      Cell cell = row.getCell(i);
-      String colName = getName(i);
-      if (handler.doSkipFileColumn(colName)) {
-        continue;
-      }
+    for (int colId = 0; colId < totalColumns; colId++) {
+      int fileColIndex = mapper.getFileColumnIndex(colId);
+      if (fileColIndex >= 0) {
+        Cell cell = row.getCell(fileColIndex);
 
-      if (cell == null) {
-        handler.setValue(colName, (String) null);
-      } else {
-        if (cell.getCellType() == Cell.CELL_TYPE_STRING) {
-          handler.setValue(colName, cell.getStringCellValue());
-        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
-          if (handler.getSQLType(colName) == SQLType.Date) {
-            handler.setValue(colName, cell.getDateCellValue());
-          } else {
-            handler.setValue(colName, String.valueOf(cell.getNumericCellValue()));
+        // if cell is null
+        if (cell == null) {
+          handler.setValue(colId, (String) null);
+        } else {
+
+          // if string value
+          if (cell.getCellType() == Cell.CELL_TYPE_STRING) {
+            handler.setValue(colId, cell.getStringCellValue());
+
+            // if numeric
+          } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+
+            // possibly date
+            if (handler.getSQLType(colId) == SQLType.Date) {
+              handler.setValue(colId, cell.getDateCellValue());
+
+              // just regular numeric
+            } else {
+              handler.setValue(colId, String.valueOf(cell.getNumericCellValue()));
+            }
           }
         }
       }

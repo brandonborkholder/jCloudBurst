@@ -1,55 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schema targetNamespace="http://github.com/jcloudburst" elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://github.com/jcloudburst">
-
-
-    <complexType name="ConfigurationType">
-    	<sequence>
-    	  <element name="jdbcUrl" type="string" maxOccurs="1"
-    	    minOccurs="0">
-    	  </element>
-    	  <element name="table" type="string" maxOccurs="1"
-    	    minOccurs="0">
-    	  </element>
-    	  <element name="file" type="string" maxOccurs="1"
-    	    minOccurs="0">
-    	  </element>
-    	  <element name="excelSheet" type="string" maxOccurs="1"
-    	    minOccurs="0">
-    	  </element>
-    	  <element name="append" type="boolean" maxOccurs="1"
-    	    minOccurs="0">
-    	  </element>
-    	  <element name="mapping" type="tns:ColumnsType" maxOccurs="1"
-    	    minOccurs="1">
-    	  </element>
-    	  <element name="failOnMissingColumn" type="boolean"
-    	    maxOccurs="1" minOccurs="0">
-    	  </element>
+<schema targetNamespace="http://github.com/jcloudburst" elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="http://github.com/jcloudburst">
+  <complexType name="ConfigurationType">
+    <sequence>
+      <element name="jdbcUrl" type="string" maxOccurs="1" minOccurs="0"></element>
+      <element name="table" type="string" maxOccurs="1" minOccurs="0"></element>
+      <element name="file" type="string" maxOccurs="unbounded" minOccurs="1"></element>
+      <element name="excelSheet" type="string" maxOccurs="unbounded" minOccurs="0"></element>
+      <element name="hasHeaderRow" type="boolean" maxOccurs="1" minOccurs="0"></element>
+      <element name="append" type="boolean" maxOccurs="1" minOccurs="0"></element>
+      <element name="mapping" type="tns:ColumnsType" maxOccurs="1" minOccurs="1"></element>
+      <element name="failOnMissingColumn" type="boolean" maxOccurs="1" minOccurs="0"></element>
     	</sequence>
-    	<attribute name="version" type="int" use="required"></attribute>
-    </complexType>
-
-    <complexType name="ColumnsType">
-      <sequence>
-        <element name="column" type="tns:ColumnMapType"
-          maxOccurs="unbounded" minOccurs="0">
-        </element>
-      </sequence>
-    </complexType>
-
-    <complexType name="ColumnMapType">
-      <sequence>
-        <element name="dbColumn" type="string" maxOccurs="1" minOccurs="1"></element>
-        <element name="format" type="string" maxOccurs="1"
-          minOccurs="0">
-        </element>
-        <choice minOccurs="1" maxOccurs="1">
-          <element name="fileColName" type="string"></element>
-          <element name="fileColIndex" type="int"></element>
-          <element name="fixedValue" type="string"></element>
-        </choice>
-      </sequence>
-    </complexType>
-
-    <element name="config" type="tns:ConfigurationType"></element>
+    <attribute name="version" type="int" use="required"></attribute>
+  </complexType>
+  <complexType name="ColumnsType">
+    <sequence>
+      <element name="column" type="tns:ColumnMapType" maxOccurs="unbounded" minOccurs="0">
+      </element>
+    </sequence>
+  </complexType>
+  <complexType name="ColumnMapType">
+    <sequence>
+      <element name="dbColumn" type="string" maxOccurs="1" minOccurs="1"></element>
+      <element name="format" type="string" maxOccurs="1" minOccurs="0"></element>
+      <choice minOccurs="1" maxOccurs="1">
+        <element name="fileColName" type="string"></element>
+        <element name="fileColIndex" type="int"></element>
+        <element name="fixedValue" type="string"></element>
+        <element name="variable" type="string"></element>
+      </choice>
+    </sequence>
+  </complexType>
+  <element name="config" type="tns:ConfigurationType"></element>
 </schema>

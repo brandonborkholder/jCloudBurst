@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.text.ParseException;
 
 import javax.xml.bind.JAXB;
 
@@ -13,28 +12,40 @@ public class JDBCImport {
   private ConfigurationType config;
 
   public JDBCImport(ConfigurationType configuration) throws IllegalArgumentException {
-    this.config = configuration;
+    config = configuration;
   }
 
-  public void execute(ImportListener listener) throws SQLException, IOException, ParseException {
+  public void execute(ImportListener listener) throws SQLException, IOException {
     Connection connection = DriverManager.getConnection(config.getJdbcUrl());
-    connection.setAutoCommit(false);
-
-    RowHandler handler = new RowHandler(config, connection);
-    ImportDataSource source = new ExcelFileSource(config);
     int rows = 0;
-    while (source.hasNextRow()) {
-      source.fillRow(handler);
-      handler.nextRow();
-      rows++;
-      listener.rowsProcessed(rows);
-    }
 
-    connection.commit();
+    for (String file : config.getFile()) {
+      for (String worksheet : config.getExcelSheet()) {
+        connection.setAutoCommit(false);
+        ImportDataSource source = new ExcelFileSource(new File(file), worksheet, config, new ColumnMapper(config.getMapping().getColumn()));
+        RowHandler handler = new RowHandler(config, new File(file), connection);
+
+        int worksheetRow = 0;
+        try {
+          while (source.hasNextRow()) {
+            source.fillRow(handler);
+            handler.nextRow();
+            rows++;
+            worksheetRow++;
+            listener.rowsProcessed(rows);
+          }
+        } catch (SQLException e) {
+          throw new SQLException("Error in row " + worksheetRow + " of worksheet '" + worksheet + "' of file '" + file, e);
+        }
+
+        handler.close();
+        connection.commit();
+      }
+    }
   }
 
   public static void main(String[] args) throws Exception {
-    String configFilePath = "./jdbcimport.xml";
+    String configFilePath = "./src/test/resources/testrun.xml";
     if (args.length > 1) {
       configFilePath = args[0];
     }
