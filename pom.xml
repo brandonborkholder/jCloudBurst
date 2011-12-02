@@ -4,7 +4,8 @@
   <groupId>anon</groupId>
   <artifactId>sql</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>sql importer</name><dependencies>
+  <name>sql importer</name>
+  <dependencies>
     <dependency>
       <groupId>org.apache.poi</groupId>
       <artifactId>poi</artifactId>
@@ -20,7 +21,18 @@
       <artifactId>jdbc4</artifactId>
       <version>3.0</version>
     </dependency>
-  </dependencies><build>
+    <dependency>
+      <groupId>com.oracle</groupId>
+      <artifactId>ojdbc6</artifactId>
+      <version>11.2.0.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>net.sf.opencsv</groupId>
+      <artifactId>opencsv</artifactId>
+      <version>2.1</version>
+    </dependency>
+  </dependencies>
+  <build>
     <plugins>
       <plugin>
         <inherited>true</inherited>
@@ -45,8 +57,8 @@
     </plugins>
     <pluginManagement>
       <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings 
-          only. It has no influence on the Maven build itself. -->
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build 
+          itself. -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
@@ -74,6 +86,4 @@
       </plugins>
     </pluginManagement>
   </build>
-  
-  
 </project>

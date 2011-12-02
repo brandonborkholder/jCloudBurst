@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Scanner;
 
 import javax.xml.bind.JAXB;
 
@@ -16,32 +17,54 @@ public class JDBCImport {
   }
 
   public void execute(ImportListener listener) throws SQLException, IOException {
-    Connection connection = DriverManager.getConnection(config.getJdbcUrl());
-    int rows = 0;
+    Connection connection = DriverManager.getConnection(config.getJdbc().getUrl(),
+        config.getJdbc().getUsername(), config.getJdbc().getPassword());
 
-    for (String file : config.getFile()) {
-      for (String worksheet : config.getExcelSheet()) {
-        connection.setAutoCommit(false);
-        ImportDataSource source = new ExcelFileSource(new File(file), worksheet, config, new ColumnMapper(config.getMapping().getColumn()));
+    int[] rowRefs = new int[2];
+    if (config.getExcel() != null) {
+      for (String file : config.getExcel().getFile()) {
+        for (String worksheet : config.getExcel().getExcelSheet()) {
+          ColumnMapper mapper = new ColumnMapper(config.getMapping().getColumn());
+          ImportDataSource source = new ExcelFileSource(new File(file), worksheet, config, mapper);
+          RowHandler handler = new RowHandler(config, new File(file), connection);
+
+          try {
+            importData(source, connection, listener, handler, rowRefs);
+          } catch (SQLException e) {
+            throw new SQLException("Error in row " + rowRefs[1] + " of worksheet " + worksheet + " of file " + file, e);
+          }
+        }
+      }
+    } else if (config.getCsv() != null) {
+      for (String file : config.getCsv().getFile()) {
+        ColumnMapper mapper = new ColumnMapper(config.getMapping().getColumn());
+        ImportDataSource source = new DelimitedFileHandler(new File(file), config, mapper);
         RowHandler handler = new RowHandler(config, new File(file), connection);
 
-        int worksheetRow = 0;
         try {
-          while (source.hasNextRow()) {
-            source.fillRow(handler);
-            handler.nextRow();
-            rows++;
-            worksheetRow++;
-            listener.rowsProcessed(rows);
-          }
+          importData(source, connection, listener, handler, rowRefs);
         } catch (SQLException e) {
-          throw new SQLException("Error in row " + worksheetRow + " of worksheet '" + worksheet + "' of file '" + file, e);
+          throw new SQLException("Error in row " + rowRefs[1] + " of file " + file, e);
         }
-
-        handler.close();
-        connection.commit();
       }
     }
+  }
+
+  protected void importData(ImportDataSource source, Connection connection, ImportListener listener, RowHandler handler, int[] rowRefs)
+      throws IOException, SQLException {
+    connection.setAutoCommit(false);
+
+    rowRefs[1] = 0;
+    while (source.hasNextRow()) {
+      source.fillRow(handler);
+      handler.nextRow();
+      rowRefs[0]++;
+      rowRefs[1]++;
+      listener.rowsProcessed(rowRefs[0]);
+    }
+
+    handler.close();
+    connection.commit();
   }
 
   public static void main(String[] args) throws Exception {
@@ -57,6 +80,15 @@ public class JDBCImport {
     }
 
     ConfigurationType config = JAXB.unmarshal(configFile, ConfigurationType.class);
+    if (Boolean.TRUE.equals(config.getJdbc().isPasswordPrompt())) {
+      System.out.println("Enter password for " + config.getJdbc().getUsername() + ": ");
+      Scanner scanner = new Scanner(System.in);
+      String password = scanner.next();
+      scanner.close();
+
+      config.getJdbc().setPassword(password);
+    }
+
     JDBCImport importer = new JDBCImport(config);
     importer.execute(new ImportListener() {
       @Override

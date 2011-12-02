@@ -31,7 +31,7 @@ public class ExcelFileSource implements ImportDataSource {
 
   protected void initializeMapper(ConfigurationType config) {
     Row row = null;
-    if (config.isHasHeaderRow()) {
+    if (config.getExcel().isHasHeaderRow()) {
       row = rowIterator.next();
     }
 
