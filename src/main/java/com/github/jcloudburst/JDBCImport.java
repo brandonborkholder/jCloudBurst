@@ -52,7 +52,6 @@ public class JDBCImport {
 
   protected void importData(ImportDataSource source, Connection connection, ImportListener listener, RowHandler handler, int[] rowRefs)
       throws IOException, SQLException {
-    connection.setAutoCommit(false);
 
     rowRefs[1] = 0;
     while (source.hasNextRow()) {
@@ -61,10 +60,14 @@ public class JDBCImport {
       rowRefs[0]++;
       rowRefs[1]++;
       listener.rowsProcessed(rowRefs[0]);
+
+      if (rowRefs[1] % 1000 == 0) {
+        handler.commitBatch();
+      }
     }
 
+    handler.commitBatch();
     handler.close();
-    connection.commit();
   }
 
   public static void main(String[] args) throws Exception {

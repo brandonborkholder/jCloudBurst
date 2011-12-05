@@ -203,7 +203,15 @@ public class RowHandler {
   public void nextRow() throws SQLException {
     fillVariableValues();
     fillFixedValues();
-    stmt.execute();
+    stmt.addBatch();
+  }
+
+  public void commitBatch() throws SQLException {
+    Connection connection = stmt.getConnection();
+    connection.setAutoCommit(false);
+    stmt.executeBatch();
+    connection.commit();
+    connection.setAutoCommit(true);
   }
 
   public void close() throws SQLException {
