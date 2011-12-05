@@ -86,5 +86,7 @@ public class DelimitedFileHandler implements ImportDataSource {
         }
       }
     }
+
+    nextRow = reader.readNext();
   }
 }
