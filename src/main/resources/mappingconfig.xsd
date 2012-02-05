@@ -4,11 +4,11 @@
   <complexType name="ConfigurationType">
     <sequence>
       <element name="jdbc" type="tns:JDBCType" maxOccurs="1" minOccurs="1"></element>
-      <element name="table" type="string" maxOccurs="1" minOccurs="0"></element>
+      <element name="table" type="string" maxOccurs="1" minOccurs="1"></element>
       <element name="append" type="boolean" maxOccurs="1" minOccurs="0"></element>
       <element name="mapping" type="tns:ColumnsType" maxOccurs="1" minOccurs="1"></element>
       <element name="failOnMissingColumn" type="boolean" maxOccurs="1" minOccurs="0"></element>
-      <choice><element name="excel" type="tns:ExcelSource"></element><element name="csv" type="tns:DelimitedSource"></element></choice>
+      <choice><element name="excel" type="tns:ExcelSource" maxOccurs="unbounded" minOccurs="0"></element><element name="csv" type="tns:DelimitedSource" maxOccurs="unbounded" minOccurs="0"></element></choice>
     </sequence>
     <attribute name="version" type="int" use="required"></attribute>
   </complexType>
@@ -43,15 +43,15 @@
 
   <complexType name="ExcelSource">
     <sequence>
-      <element name="file" type="string" maxOccurs="unbounded" minOccurs="1"></element>
-      <element name="excelSheet" type="string" maxOccurs="unbounded" minOccurs="0"></element>
+      <element name="file" type="string" maxOccurs="1" minOccurs="1"></element>
+      <element name="excelSheet" type="string" maxOccurs="1" minOccurs="1"></element>
       <element name="hasHeaderRow" type="boolean" maxOccurs="1" minOccurs="0"></element>
     </sequence>
   </complexType>
 
   <complexType name="DelimitedSource">
     <sequence>
-      <element name="file" type="string" maxOccurs="unbounded" minOccurs="1"></element>
+      <element name="file" type="string" maxOccurs="1" minOccurs="1"></element>
       <element name="separatorChar" type="string" maxOccurs="1" minOccurs="0"></element>
       <element name="hasHeaderRow" type="boolean" maxOccurs="1" minOccurs="0"></element>
     </sequence>
