@@ -21,6 +21,9 @@ public class FileSourceChooser extends ConfigStepPanel {
   private ConfigStepPanel activePanel;
 
   public FileSourceChooser() {
+    switcherLayout = new CardLayout();
+    switcherPanel = new JPanel(switcherLayout);
+    
     final DelimitedSourcePanel delimitedSource = new DelimitedSourcePanel();
     switcherPanel.add(delimitedSource, "delimited");
 

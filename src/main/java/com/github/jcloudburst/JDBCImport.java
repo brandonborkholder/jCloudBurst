@@ -20,54 +20,57 @@ public class JDBCImport {
     Connection connection = DriverManager.getConnection(config.getJdbc().getUrl(),
         config.getJdbc().getUsername(), config.getJdbc().getPassword());
 
-    int[] rowRefs = new int[2];
-    if (config.getExcel() != null) {
-      for (String file : config.getExcel().getFile()) {
-        for (String worksheet : config.getExcel().getExcelSheet()) {
-          ColumnMapper mapper = new ColumnMapper(config.getMapping().getColumn());
-          ImportDataSource source = new ExcelFileSource(new File(file), worksheet, config, mapper);
-          RowHandler handler = new RowHandler(config, new File(file), connection);
+    ImportContext context = new ImportContext();
+    try {
+      if (config.getExcel() != null) {
+        for (ExcelSource source : config.getExcel()) {
+          ExcelFileSource sourceReader = new ExcelFileSource(source);
+          context.newExcelSource(source.getFile(), source.getExcelSheet());
 
-          try {
-            importData(source, connection, listener, handler, rowRefs);
-          } catch (SQLException e) {
-            throw new SQLException("Error in row " + rowRefs[1] + " of worksheet " + worksheet + " of file " + file, e);
-          }
+          importData(sourceReader, connection, listener, context);
         }
       }
-    } else if (config.getCsv() != null) {
-      for (String file : config.getCsv().getFile()) {
-        ColumnMapper mapper = new ColumnMapper(config.getMapping().getColumn());
-        ImportDataSource source = new DelimitedFileHandler(new File(file), config, mapper);
-        RowHandler handler = new RowHandler(config, new File(file), connection);
 
-        try {
-          importData(source, connection, listener, handler, rowRefs);
-        } catch (SQLException e) {
-          throw new SQLException("Error in row " + rowRefs[1] + " of file " + file, e);
+      if (config.getCsv() != null) {
+        for (DelimitedSource source : config.getCsv()) {
+          DelimitedFileReader sourceReader = new DelimitedFileReader(source);
+          context.newDelimitedSource(source.getFile());
+
+          importData(sourceReader, connection, listener, context);
         }
       }
+    } catch (SQLException e) {
+      String err = null;
+      if (context.getWorksheet() == null) {
+        err = String.format("Error in row %d of file %s", context.getSourceRowCount(), context.getFile());
+      } else {
+        err = String.format("Error in row %d of worksheet %s of file %s", context.getSourceRowCount(), context.getWorksheet(),
+            context.getFile());
+      }
+
+      throw new SQLException(err);
     }
   }
 
-  protected void importData(ImportDataSource source, Connection connection, ImportListener listener, RowHandler handler, int[] rowRefs)
+  protected void importData(SourceReader sourceReader, Connection connection, ImportListener listener, ImportContext context)
       throws IOException, SQLException {
+    ColumnMapper mapper = new ColumnMapper(config.getMapping().getColumn());
+    SourceFileHandler sourceHandler = new SourceFileHandler(sourceReader, config, mapper);
+    RowHandler rowHandler = new RowHandler(config, context, connection);
 
-    rowRefs[1] = 0;
-    while (source.hasNextRow()) {
-      source.fillRow(handler);
-      handler.nextRow();
-      rowRefs[0]++;
-      rowRefs[1]++;
-      listener.rowsProcessed(rowRefs[0]);
+    while (sourceHandler.hasNextRow()) {
+      sourceHandler.fillRow(rowHandler);
+      rowHandler.nextRow();
+      context.incrementRows();
+      listener.rowsProcessed(context.getTotalRowCount());
 
-      if (rowRefs[1] % 1000 == 0) {
-        handler.commitBatch();
+      if (context.getTotalRowCount() % 1000 == 0) {
+        rowHandler.commitBatch();
       }
     }
 
-    handler.commitBatch();
-    handler.close();
+    rowHandler.commitBatch();
+    rowHandler.close();
   }
 
   public static void main(String[] args) throws Exception {

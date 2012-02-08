@@ -1,49 +1,36 @@
 package com.github.jcloudburst;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 
-import au.com.bytecode.opencsv.CSVReader;
-
-public class DelimitedFileHandler implements ImportDataSource {
-  protected CSVReader reader;
-
+public class SourceFileHandler {
   protected ColumnMapper mapper;
+  protected SourceReader reader;
 
-  protected String[] nextRow;
+  protected boolean hasNext;
 
-  public DelimitedFileHandler(File file, ConfigurationType config, ColumnMapper mapper) throws IOException {
+  public SourceFileHandler(SourceReader reader, ConfigurationType config, ColumnMapper mapper) throws IOException {
     this.mapper = mapper;
-
-    String sep = config.getCsv().getSeparatorChar();
-    if (sep == null || sep.isEmpty()) {
-      sep = ",";
-    }
-
-    reader = new CSVReader(new FileReader(file), sep.charAt(0));
+    this.reader = reader;
 
     initializeMapper(config);
   }
 
   protected void initializeMapper(ConfigurationType config) throws IOException {
-    String[] row = null;
-    if (config.getCsv().isHasHeaderRow()) {
-      row = reader.readNext();
-    }
+    List<String> header = reader.getHeader();
 
     for (int colId = 0; colId < mapper.numColumns(); colId++) {
       if (!mapper.isColumnDefined(colId)) {
-        if (row == null) {
+        if (header == null) {
           throw new IllegalArgumentException("No header row specified and no file column index specified for column " + colId);
         }
 
         int fileColIndex = -1;
         String fileColName = mapper.getFileColumnName(colId);
 
-        for (int i = 0; i < row.length; i++) {
-          String value = row[i];
+        for (int i = 0; i < header.size(); i++) {
+          String value = header.get(i);
           if (value != null) {
             if (fileColName.equalsIgnoreCase(value)) {
               fileColIndex = i;
@@ -61,22 +48,29 @@ public class DelimitedFileHandler implements ImportDataSource {
       }
     }
 
-    nextRow = reader.readNext();
+    advance();
   }
 
-  @Override
   public boolean hasNextRow() {
-    return nextRow != null;
+    return hasNext;
   }
 
-  @Override
+  protected void advance() throws IOException {
+    if (hasNext) {
+      hasNext = reader.next();
+      if (!hasNext) {
+        reader.close();
+      }
+    }
+  }
+
   public void fillRow(RowHandler handler) throws SQLException, IOException {
     int totalColumns = mapper.numColumns();
 
     for (int colId = 0; colId < totalColumns; colId++) {
       int fileColIndex = mapper.getFileColumnIndex(colId);
       if (fileColIndex >= 0) {
-        String value = nextRow[fileColIndex];
+        String value = reader.getValue(fileColIndex);
 
         // if cell is null
         if (value == null || value.isEmpty()) {
@@ -87,6 +81,6 @@ public class DelimitedFileHandler implements ImportDataSource {
       }
     }
 
-    nextRow = reader.readNext();
+    advance();
   }
 }

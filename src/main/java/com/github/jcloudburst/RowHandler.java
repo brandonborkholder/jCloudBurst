@@ -1,6 +1,5 @@
 package com.github.jcloudburst;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,10 +10,17 @@ import java.sql.Types;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 public class RowHandler {
+  public static final String VAR_FILE = "$file";
+  public static final String VAR_LINE = "$line";
+
+  public static final List<String> VARIABLES = Collections.unmodifiableList(Arrays.asList(VAR_FILE, VAR_LINE));
+
   protected PreparedStatement stmt;
 
   protected SQLType[] types;
@@ -23,7 +29,7 @@ public class RowHandler {
 
   protected List<ColumnMapType> maps;
 
-  protected File file;
+  protected ImportContext context;
 
   protected enum SQLType {
     String,
@@ -33,8 +39,8 @@ public class RowHandler {
     Numeric,
   }
 
-  public RowHandler(ConfigurationType config, File file, Connection connection) throws SQLException {
-    this.file = file;
+  public RowHandler(ConfigurationType config, ImportContext context, Connection connection) throws SQLException {
+    this.context = context;
     maps = config.getMapping().getColumn();
     types = new SQLType[maps.size()];
     sqlTypes = new int[maps.size()];
@@ -182,8 +188,10 @@ public class RowHandler {
     int colId = 0;
     for (ColumnMapType map : maps) {
       if (map.getVariable() != null) {
-        if (map.getVariable().equalsIgnoreCase("$file")) {
-          setDbValue(colId, file.getName());
+        if (map.getVariable().equalsIgnoreCase(VAR_FILE)) {
+          setDbValue(colId, context.getFile());
+        } else if (map.getVariable().equalsIgnoreCase(VAR_LINE)) {
+          setDbValue(colId, String.valueOf(context.getSourceRowCount()));
         }
       }
       colId++;

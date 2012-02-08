@@ -118,14 +118,15 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
       protected void done() {
         try {
           connectionProps = get();
-          synchronized (DatabaseConnectionPanel.this) {
-            DatabaseConnectionPanel.this.notifyAll();
-          }
         } catch (Exception e) {
           if (informUserOnError) {
             JOptionPane.showMessageDialog(DatabaseConnectionPanel.this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
           } else {
             exceptionRef[0] = e;
+          }
+        } finally {
+          synchronized (DatabaseConnectionPanel.this) {
+            DatabaseConnectionPanel.this.notifyAll();
           }
         }
       }

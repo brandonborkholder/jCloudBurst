@@ -2,108 +2,98 @@ package com.github.jcloudburst;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import com.github.jcloudburst.RowHandler.SQLType;
-
-public class ExcelFileSource implements ImportDataSource {
+public class ExcelFileSource implements SourceReader {
   protected Sheet activeSheet;
 
   protected Iterator<Row> rowIterator;
 
-  protected ColumnMapper mapper;
+  private List<String> header;
 
-  public ExcelFileSource(File workbookFile, String worksheet, ConfigurationType config, ColumnMapper mapper) throws IOException {
-    this.mapper = mapper;
+  private Row current;
+
+  public ExcelFileSource(ExcelSource source) throws IOException {
+    File workbookFile = new File(source.getFile());
+    String worksheet = source.getExcelSheet();
 
     XSSFWorkbook workbook = new XSSFWorkbook(workbookFile.getAbsolutePath());
     activeSheet = workbook.getSheet(worksheet);
     rowIterator = activeSheet.iterator();
 
-    initializeMapper(config);
+    header = null;
+    if (source.isHasHeaderRow()) {
+      header = Collections.unmodifiableList(readHeader());
+    }
   }
 
-  protected void initializeMapper(ConfigurationType config) {
-    Row row = null;
-    if (config.getExcel().isHasHeaderRow()) {
-      row = rowIterator.next();
-    }
+  @Override
+  public void close() throws IOException {
+    // nop
+  }
 
-    for (int colId = 0; colId < mapper.numColumns(); colId++) {
-      if (!mapper.isColumnDefined(colId)) {
-        if (row == null) {
-          throw new IllegalArgumentException("No header row specified and no file column index specified for column " + colId);
-        }
+  @Override
+  public List<String> getHeader() throws IOException {
+    return header;
+  }
 
-        int fileColIndex = -1;
-        String fileColName = mapper.getFileColumnName(colId);
-        int lastCell = row.getLastCellNum();
+  @Override
+  public String getValue(int column) throws IOException {
+    Cell cell = current.getCell(column);
 
-        for (int i = 0; i < lastCell; i++) {
-          Cell cell = row.getCell(i);
-          if (cell != null) {
-            String cellValue = cell.getStringCellValue();
-            if (fileColName.equalsIgnoreCase(cellValue)) {
-              fileColIndex = i;
-              break;
-            }
-          }
-        }
+    // if cell is null
+    if (cell == null) {
+      return null;
+    } else {
 
-        if (fileColIndex < 0) {
-          throw new IllegalArgumentException("No file column index specified for column " + colId +
-              " and no corresponding column named '" + fileColName + "'");
-        } else {
-          mapper.setFileColumnIndex(colId, fileColIndex);
-        }
+      // if string value
+      if (cell.getCellType() == Cell.CELL_TYPE_STRING) {
+        return cell.getStringCellValue();
+        // if numeric
+      } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+        // just regular numeric
+        return String.valueOf(cell.getNumericCellValue());
+      } else {
+        return null;
       }
     }
   }
 
   @Override
-  public void fillRow(RowHandler handler) throws SQLException, IOException {
+  public boolean next() throws IOException {
+    current = null;
+    if (rowIterator.hasNext()) {
+      current = rowIterator.next();
+    }
+
+    return current != null;
+  }
+
+  protected List<String> readHeader() throws IOException {
     Row row = rowIterator.next();
-    int totalColumns = mapper.numColumns();
+    if (row == null) {
+      throw new IllegalArgumentException("No header row in excel sheet: " + activeSheet.getSheetName());
+    }
 
-    for (int colId = 0; colId < totalColumns; colId++) {
-      int fileColIndex = mapper.getFileColumnIndex(colId);
-      if (fileColIndex >= 0) {
-        Cell cell = row.getCell(fileColIndex);
-
-        // if cell is null
-        if (cell == null) {
-          handler.setValue(colId, (String) null);
-        } else {
-
-          // if string value
-          if (cell.getCellType() == Cell.CELL_TYPE_STRING) {
-            handler.setValue(colId, cell.getStringCellValue());
-
-            // if numeric
-          } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
-
-            // possibly date
-            if (handler.getSQLType(colId) == SQLType.Date) {
-              handler.setValue(colId, cell.getDateCellValue());
-
-              // just regular numeric
-            } else {
-              handler.setValue(colId, String.valueOf(cell.getNumericCellValue()));
-            }
-          }
-        }
+    List<String> header = new ArrayList<String>();
+    int lastCell = row.getLastCellNum();
+    for (int col = 0; col < lastCell; col++) {
+      Cell cell = row.getCell(col);
+      if (cell == null) {
+        header.add(null);
+      } else {
+        header.add(cell.getStringCellValue());
       }
     }
-  }
 
-  @Override
-  public boolean hasNextRow() {
-    return rowIterator.hasNext();
+    return header;
   }
 }

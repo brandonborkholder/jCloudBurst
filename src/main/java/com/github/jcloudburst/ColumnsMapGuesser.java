@@ -9,12 +9,9 @@ public class ColumnsMapGuesser {
   private List<String> fieldNames;
   private List<String> columnNames;
 
-  public void addSourceFields(List<String> fieldNames) {
-    this.fieldNames = new ArrayList<String>(fieldNames);
-  }
-
-  public void addDbColumns(List<String> columnNames) {
-    this.columnNames = new ArrayList<String>(columnNames);
+  public ColumnsMapGuesser(List<String> dbColumns, List<String> sourceFields) {
+    fieldNames = new ArrayList<String>(sourceFields);
+    columnNames = new ArrayList<String>(dbColumns);
   }
 
   private void clean(List<String> list) {
