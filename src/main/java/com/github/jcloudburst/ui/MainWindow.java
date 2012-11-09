@@ -30,7 +30,9 @@ public class MainWindow extends JFrame {
   protected JButton nextButton;
   protected JButton backButton;
 
-  public MainWindow() {
+  public MainWindow(ConfigurationType config) {
+    this.config = config;
+
     switcherLayout = new CardLayout();
     switcherPanel = new JPanel(switcherLayout);
 
@@ -68,7 +70,7 @@ public class MainWindow extends JFrame {
     updateUIForCurrentStep();
 
     setLayout(new MigLayout("", "[grow|grow]", "[grow|]"));
-    add(switcherPanel, "grow,wrap");
+    add(switcherPanel, "span,grow,wrap");
     add(backButton, "left");
     add(nextButton, "right");
   }
@@ -78,8 +80,8 @@ public class MainWindow extends JFrame {
     ConfigStepPanel next = steps.get(currentStep + 1);
 
     try {
-      current.addConfiguration(config);
-      next.initFromConfiguration(config);
+      current.saveToConfiguration(config);
+      next.loadConfiguration(config);
     } catch (Exception e) {
       e.printStackTrace();
       JOptionPane.showMessageDialog(this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
@@ -91,19 +93,20 @@ public class MainWindow extends JFrame {
 
   protected void back() {
     currentStep--;
+    updateUIForCurrentStep();
   }
 
   protected void updateUIForCurrentStep() {
     switcherLayout.show(switcherPanel, String.valueOf(currentStep));
 
-    backButton.setEnabled(currentStep > 0);
-    nextButton.setEnabled(currentStep < steps.size() - 1);
+    backButton.setVisible(currentStep > 0);
+    nextButton.setVisible(currentStep < steps.size() - 1);
   }
 
   public static void main(String[] args) throws Exception {
     UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
-    MainWindow window = new MainWindow();
+    MainWindow window = new MainWindow(new ConfigurationType());
     window.setPreferredSize(new Dimension(1024, 768));
     window.pack();
     window.setLocationRelativeTo(null);

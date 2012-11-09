@@ -3,21 +3,18 @@ package com.github.jcloudburst.ui;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import com.github.jcloudburst.ConfigurationType;
-
 @SuppressWarnings("serial")
 public class ProgressPanel extends ConfigStepPanel {
 
   @Override
-  public void initFromConfiguration(ConfigurationType config) throws SQLException, IOException, IllegalStateException {
-    // TODO Auto-generated method stub
-
+  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
+    // TODO Not implemented yet...
+    throw new AssertionError("Not implemented yet...");
   }
 
   @Override
-  public void addConfiguration(ConfigurationType config) throws SQLException, IOException, IllegalStateException {
-    // TODO Auto-generated method stub
-
+  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
+    // TODO Not implemented yet...
+    throw new AssertionError("Not implemented yet...");
   }
-
 }

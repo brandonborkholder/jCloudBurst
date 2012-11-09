@@ -1,10 +1,11 @@
 package com.github.jcloudburst.ui;
 
+import java.io.IOException;
+import java.sql.SQLException;
+
 import javax.swing.JScrollPane;
 
 import net.miginfocom.swing.MigLayout;
-
-import com.github.jcloudburst.ConfigurationType;
 
 @SuppressWarnings("serial")
 public class ExcelSourcePanel extends ConfigStepPanel {
@@ -20,12 +21,13 @@ public class ExcelSourcePanel extends ConfigStepPanel {
   }
 
   @Override
-  public void initFromConfiguration(ConfigurationType config) {
+  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
     table.initFrom(config.getExcel());
   }
 
   @Override
-  public void addConfiguration(ConfigurationType config) {
+  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
+    config.getExcel().clear();
     config.getExcel().addAll(table.getSourcesList());
   }
 }

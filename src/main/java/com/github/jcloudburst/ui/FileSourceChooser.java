@@ -12,8 +12,6 @@ import javax.swing.JPanel;
 
 import net.miginfocom.swing.MigLayout;
 
-import com.github.jcloudburst.ConfigurationType;
-
 @SuppressWarnings("serial")
 public class FileSourceChooser extends ConfigStepPanel {
   private CardLayout switcherLayout;
@@ -23,7 +21,7 @@ public class FileSourceChooser extends ConfigStepPanel {
   public FileSourceChooser() {
     switcherLayout = new CardLayout();
     switcherPanel = new JPanel(switcherLayout);
-    
+
     final DelimitedSourcePanel delimitedSource = new DelimitedSourcePanel();
     switcherPanel.add(delimitedSource, "delimited");
 
@@ -56,14 +54,14 @@ public class FileSourceChooser extends ConfigStepPanel {
   }
 
   @Override
-  public void initFromConfiguration(ConfigurationType config) throws SQLException, IOException, IllegalStateException {
+  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
     for (Component c : switcherPanel.getComponents()) {
-      ((ConfigStepPanel) c).initFromConfiguration(config);
+      ((ConfigStepPanel) c).loadConfiguration(config);
     }
   }
 
   @Override
-  public void addConfiguration(ConfigurationType config) throws SQLException, IOException, IllegalStateException {
-    activePanel.addConfiguration(config);
+  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
+    activePanel.saveToConfiguration(config);
   }
 }

@@ -236,7 +236,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   }
 
   @Override
-  public void initFromConfiguration(ConfigurationType config) throws SQLException, IOException {
+  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
     List<ColumnInfo> columns = getColumns(config.getJdbc(), config.getTable());
     List<FieldInfo> fields = getFields(config);
     List<FieldInfo> defaultFields = getInitialFields(columns, fields, config.getMapping());
@@ -245,7 +245,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   }
 
   @Override
-  public void addConfiguration(ConfigurationType config) {
+  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
     config.getMapping().getColumn().clear();
     config.getMapping().getColumn().addAll(columnMaps);
   }
