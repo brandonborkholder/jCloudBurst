@@ -12,6 +12,7 @@ public class ExcelSourcePanel extends ConfigStepPanel {
   private ExcelSourceTable table;
 
   public ExcelSourcePanel() {
+    super("Excel");
     table = new ExcelSourceTable();
 
     setLayout(new MigLayout("", "[grow|grow]", "[grow]"));

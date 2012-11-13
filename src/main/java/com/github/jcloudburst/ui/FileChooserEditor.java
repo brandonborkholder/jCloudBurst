@@ -1,17 +1,19 @@
 package com.github.jcloudburst.ui;
 
 import java.awt.Component;
+import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.EventObject;
 
 import javax.swing.AbstractCellEditor;
 import javax.swing.JFileChooser;
-import javax.swing.JPanel;
+import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.table.TableCellEditor;
 
 @SuppressWarnings("serial")
 public class FileChooserEditor extends AbstractCellEditor implements TableCellEditor {
-  private String lastDir = ".";
+  private static String lastDir = ".";
 
   private String path;
 
@@ -30,11 +32,20 @@ public class FileChooserEditor extends AbstractCellEditor implements TableCellEd
     if (result == JFileChooser.APPROVE_OPTION) {
       File chosen = chooser.getSelectedFile();
       path = chosen.toString();
+      lastDir = chosen.getParent();
       fireEditingStopped();
     } else {
       fireEditingCanceled();
     }
 
-    return new JPanel();
+    return new JLabel(path);
+  }
+
+  public boolean isCellEditable(EventObject evt) {
+    if (evt instanceof MouseEvent) {
+      return ((MouseEvent) evt).getClickCount() >= 2;
+    } else {
+      return true;
+    }
   }
 }

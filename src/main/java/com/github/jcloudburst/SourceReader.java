@@ -3,7 +3,7 @@ package com.github.jcloudburst;
 import java.io.IOException;
 import java.util.List;
 
-public interface SourceReader {
+public interface SourceReader extends AutoCloseable {
   boolean next() throws IOException;
 
   List<String> getHeader() throws IOException;

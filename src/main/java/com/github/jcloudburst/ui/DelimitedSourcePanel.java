@@ -12,6 +12,7 @@ public class DelimitedSourcePanel extends ConfigStepPanel {
   private DelimitedSourceTable table;
 
   public DelimitedSourcePanel() {
+    super("CSV");
     table = new DelimitedSourceTable();
 
     setLayout(new MigLayout("", "[grow|grow]", "[grow]"));

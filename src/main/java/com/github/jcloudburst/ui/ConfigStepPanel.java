@@ -32,7 +32,7 @@ public abstract class ConfigStepPanel extends JPanel {
   protected abstract void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException;
 
   protected void verifyNotEmpty(String name, Object value) throws IllegalStateException {
-    if (value != null || (value instanceof String && ((String) value).isEmpty())) {
+    if (value == null || (value instanceof String && ((String) value).isEmpty())) {
       throw new IllegalStateException(name + " must not be empty");
     }
   }

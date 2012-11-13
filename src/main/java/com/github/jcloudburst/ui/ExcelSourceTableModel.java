@@ -94,12 +94,15 @@ public class ExcelSourceTableModel extends AbstractTableModel {
     switch (columnIndex) {
     case 0:
       row.setFile((String) aValue);
+      break;
 
     case 1:
       row.setExcelSheet((String) aValue);
+      break;
 
     case 2:
       row.setHasHeaderRow((Boolean) aValue);
+      break;
 
     default:
       throw new AssertionError("Illegal column index");

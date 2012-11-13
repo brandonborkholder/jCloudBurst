@@ -6,7 +6,6 @@ import java.awt.event.ItemListener;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -36,22 +35,27 @@ import com.github.jcloudburst.ConfigurationType;
 import com.github.jcloudburst.DelimitedFileReader;
 import com.github.jcloudburst.DelimitedSource;
 import com.github.jcloudburst.JDBCType;
+import com.github.jcloudburst.ui.TableChooserPanel.TableRef;
 
 @SuppressWarnings("serial")
 public class ColumnMapperPanel extends ConfigStepPanel {
   private List<ColumnMapType> columnMaps;
+  
+  public ColumnMapperPanel() {
+    super("Columns");
+  }
 
   private void populateColumns(List<ColumnInfo> columns, List<FieldInfo> fields, List<FieldInfo> defaultFields) {
     removeAll();
 
-    columnMaps = new ArrayList<ColumnMapType>(columns.size());
+    columnMaps = new ArrayList<>(columns.size());
     for (ColumnInfo column : columns) {
       ColumnMapType map = new ColumnMapType();
       map.setDbColumn(column.name);
       columnMaps.add(map);
     }
 
-    Vector<FieldInfo> fieldsVector = new Vector<FieldInfo>(fields);
+    Vector<FieldInfo> fieldsVector = new Vector<>(fields);
 
     JPanel listPanel = new JPanel(new MigLayout("", "[|grow,sg|grow,sg|grow,sg|grow,sg]"));
     for (int index = 0; index < columns.size(); index++) {
@@ -65,7 +69,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   private void addColumn(final int index, JPanel container, ColumnInfo column, Vector<FieldInfo> fields, FieldInfo defaultField) {
     final JCheckBox skipBox = new JCheckBox();
     JLabel columnInfoLabel = new JLabel(column.name + " (" + column.typeName + ")");
-    final JComboBox<FieldInfo> fieldChooser = new JComboBox<FieldInfo>(fields);
+    final JComboBox<FieldInfo> fieldChooser = new JComboBox<>(fields);
     final JTextField dateFormatField = new JTextField("yyyy-MM-dd HH:mm:ss");
     final JTextField fixedValueField = new JTextField();
 
@@ -133,16 +137,12 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   }
 
   private List<ColumnInfo> getColumns(JDBCType connectionInfo, String table) throws SQLException {
-    String url = connectionInfo.getUrl();
-    String username = connectionInfo.getUsername();
-    String password = connectionInfo.getPassword();
+    try (Connection c = getConnection()) {
+      DatabaseMetaData metadata = c.getMetaData();
+      TableRef tableRef = new TableRef(table);
+      ResultSet set = metadata.getColumns(tableRef.catalog, tableRef.schema, tableRef.name, null);
 
-    Connection connection = DriverManager.getConnection(url, username, password);
-    try {
-      DatabaseMetaData metadata = connection.getMetaData();
-      ResultSet set = metadata.getColumns(null, null, table, null);
-
-      List<ColumnInfo> columns = new ArrayList<ColumnInfo>();
+      List<ColumnInfo> columns = new ArrayList<>();
       while (set.next()) {
         columns.add(new ColumnInfo(set));
       }
@@ -150,12 +150,6 @@ public class ColumnMapperPanel extends ConfigStepPanel {
       set.close();
       Collections.sort(columns);
       return columns;
-    } finally {
-      try {
-        connection.close();
-      } catch (SQLException e) {
-        // ignore
-      }
     }
   }
 
@@ -174,7 +168,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
     List<FieldInfo> fields = null;
     if (fieldNames != null) {
-      fields = new ArrayList<FieldInfo>(fieldNames.size());
+      fields = new ArrayList<>(fieldNames.size());
       for (String name : fieldNames) {
         FieldInfo field = new FieldInfo();
         field.name = name;
@@ -192,18 +186,18 @@ public class ColumnMapperPanel extends ConfigStepPanel {
       return Arrays.asList(new FieldInfo[columns.size()]);
     }
 
-    List<String> colNames = new ArrayList<String>(columns.size());
+    List<String> colNames = new ArrayList<>(columns.size());
     for (ColumnInfo column : columns) {
       colNames.add(column.name);
     }
 
-    List<String> fieldNames = new ArrayList<String>(fields.size());
+    List<String> fieldNames = new ArrayList<>(fields.size());
     for (FieldInfo field : fields) {
       fieldNames.add(field.name);
     }
 
     ColumnsMapGuesser guesser = new ColumnsMapGuesser(colNames, fieldNames);
-    Map<Integer, Integer> map = new TreeMap<Integer, Integer>(guesser.guessMapping());
+    Map<Integer, Integer> map = new TreeMap<>(guesser.guessMapping());
 
     // add existing mappings
     for (ColumnMapType entry : columnMap.getColumn()) {
@@ -223,7 +217,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
       }
     }
 
-    List<FieldInfo> initialFields = new ArrayList<FieldInfo>(columns.size());
+    List<FieldInfo> initialFields = new ArrayList<>(columns.size());
     for (int i = 0; i < columns.size(); i++) {
       if (map.containsKey(i)) {
         initialFields.add(fields.get(map.get(i)));
