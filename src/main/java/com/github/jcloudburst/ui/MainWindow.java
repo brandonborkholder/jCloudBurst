@@ -73,6 +73,13 @@ public class MainWindow extends JFrame {
     add(switcherPanel, "span,grow,wrap");
     add(backButton, "left");
     add(nextButton, "right");
+    
+    try {
+    steps.get(currentStep).loadConfiguration(config);
+    } catch (Exception e) {
+      e.printStackTrace();
+      JOptionPane.showMessageDialog(this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
+    }
   }
 
   protected void next() {

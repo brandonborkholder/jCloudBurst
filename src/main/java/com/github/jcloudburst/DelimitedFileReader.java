@@ -26,7 +26,7 @@ public class DelimitedFileReader implements SourceReader {
 
     reader = new CSVReader(new FileReader(source.getFile()), separator);
 
-    if (source.isHasHeaderRow()) {
+    if (source.isHasHeaderRow() != null && source.isHasHeaderRow()) {
       String[] row = reader.readNext();
       names = Collections.unmodifiableList(Arrays.asList(row));
     } else {

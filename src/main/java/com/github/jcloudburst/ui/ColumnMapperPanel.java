@@ -40,7 +40,7 @@ import com.github.jcloudburst.ui.TableChooserPanel.TableRef;
 @SuppressWarnings("serial")
 public class ColumnMapperPanel extends ConfigStepPanel {
   private List<ColumnMapType> columnMaps;
-  
+
   public ColumnMapperPanel() {
     super("Columns");
   }
@@ -58,6 +58,12 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     Vector<FieldInfo> fieldsVector = new Vector<>(fields);
 
     JPanel listPanel = new JPanel(new MigLayout("", "[|grow,sg|grow,sg|grow,sg|grow,sg]"));
+    add(new JLabel("Skip"));
+    add(new JLabel("DB Column"));
+    add(new JLabel("File Field"));
+    add(new JLabel("Fixed Value"));
+    add(new JLabel("Date Format"), "wrap");
+
     for (int index = 0; index < columns.size(); index++) {
       addColumn(index, listPanel, columns.get(index), fieldsVector, defaultFields.get(index));
     }
@@ -104,7 +110,12 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     fieldChooser.addItemListener(new ItemListener() {
       @Override
       public void itemStateChanged(ItemEvent e) {
-        columnMaps.get(index).setFileColIndex(((FieldInfo) fieldChooser.getSelectedItem()).index);
+        FieldInfo field = (FieldInfo) fieldChooser.getSelectedItem();
+        if (field == null) {
+          columnMaps.get(index).setFileColIndex(null);
+        } else {
+          columnMaps.get(index).setFileColIndex(field.index);
+        }
       }
     });
 
@@ -138,8 +149,8 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
   private List<ColumnInfo> getColumns(JDBCType connectionInfo, String table) throws SQLException {
     try (Connection c = getConnection()) {
-      DatabaseMetaData metadata = c.getMetaData();
       TableRef tableRef = new TableRef(table);
+      DatabaseMetaData metadata = c.getMetaData();
       ResultSet set = metadata.getColumns(tableRef.catalog, tableRef.schema, tableRef.name, null);
 
       List<ColumnInfo> columns = new ArrayList<>();
@@ -231,6 +242,10 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
   @Override
   protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
+    if (config.getMapping() == null) {
+      config.setMapping(new ColumnsType());
+    }
+
     List<ColumnInfo> columns = getColumns(config.getJdbc(), config.getTable());
     List<FieldInfo> fields = getFields(config);
     List<FieldInfo> defaultFields = getInitialFields(columns, fields, config.getMapping());
@@ -256,7 +271,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
       sqlType = set.getInt(5);
       typeName = set.getString(6);
       index = set.getInt(17);
-      nullable = set.getInt(18) == DatabaseMetaData.columnNullable;
+      nullable = "YES".equals(set.getString(18));
     }
 
     @Override
