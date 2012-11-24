@@ -1,12 +1,8 @@
 package com.github.jcloudburst.ui;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -16,7 +12,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.swing.DefaultListModel;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -30,15 +25,18 @@ import javax.swing.table.AbstractTableModel;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
+
 @SuppressWarnings("serial")
 public class TableChooserPanel extends ConfigStepPanel {
   private JList<TableRef> tableList;
   private JTable columnsTable;
 
   private JCheckBox truncateCheckbox;
-  private JButton populateTablesButton;
 
   private Map<TableRef, Map<String, String>> tableToColumnsMap;
+
+  private ConnectionState lastFetchedState;
 
   public TableChooserPanel() {
     super("Table");
@@ -47,13 +45,6 @@ public class TableChooserPanel extends ConfigStepPanel {
 
     tableList = new JList<>();
     truncateCheckbox = new JCheckBox("Truncate before insert");
-    populateTablesButton = new JButton("Get Tables");
-    populateTablesButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        populateTables();
-      }
-    });
 
     tableList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     tableList.addListSelectionListener(new ListSelectionListener() {
@@ -68,50 +59,72 @@ public class TableChooserPanel extends ConfigStepPanel {
     add(new JLabel("Table Schema"), "wrap");
     add(new JScrollPane(tableList), "grow");
     add(new JScrollPane(columnsTable), "grow,wrap");
-    add(populateTablesButton, "grow");
     add(truncateCheckbox, "grow");
   }
 
-  protected void populateTables() {
+  @Override
+  protected void flushConfigurationToUI() throws IllegalStateException {
+    if (lastFetchedState == null || !lastFetchedState.equals(new ConnectionState(config))) {
+      populateTables(config.getTable());
+    }
+
+    truncateCheckbox.setSelected(config.isAppend() == null || !config.isAppend());
+  }
+
+  @Override
+  protected void flushUIToConfiguration() throws IllegalStateException {
+    verifyNotEmpty("Table", tableList.getSelectedValue());
+
+    config.setTable(tableList.getSelectedValue().toString());
+    config.setAppend(!truncateCheckbox.isSelected());
+  }
+
+  private void populateTables(final String tableToSetOnDone) {
+    tableList.setModel(new DefaultListModel<TableRef>());
+    tableToColumnsMap.clear();
+
     new SwingWorker<List<TableRef>, Void>() {
       @Override
       protected List<TableRef> doInBackground() throws Exception {
-        return fetchTableNames();
+        setBackgroundTaskStatus("fetching list of accessible tables ...");
+
+        try (Connection c = getConnection()) {
+          DatabaseMetaData metadata = c.getMetaData();
+          ResultSet set = metadata.getTables(null, null, "%", new String[] { "TABLE" });
+
+          List<TableRef> tables = new ArrayList<>();
+          while (set.next()) {
+            String catalog = set.getString(1);
+            String schema = set.getString(2);
+            String name = set.getString(3);
+            tables.add(new TableRef(catalog, schema, name));
+          }
+
+          set.close();
+          return tables;
+        }
       }
 
       @Override
       protected void done() {
+        setBackgroundTaskStatus(null);
+
         try {
           DefaultListModel<TableRef> model = new DefaultListModel<>();
           for (TableRef table : get()) {
             model.addElement(table);
           }
 
-          tableToColumnsMap.clear();
           tableList.setModel(model);
+
+          if (tableToSetOnDone != null) {
+            tableList.setSelectedValue(tableToSetOnDone, true);
+          }
         } catch (Exception e) {
           e.printStackTrace();
         }
       }
     }.execute();
-  }
-
-  private List<TableRef> fetchTableNames() throws SQLException {
-    try (Connection c = getConnection()) {
-      DatabaseMetaData metadata = c.getMetaData();
-      ResultSet set = metadata.getTables(null, null, "%", new String[] { "TABLE" });
-
-      List<TableRef> tables = new ArrayList<>();
-      while (set.next()) {
-        String catalog = set.getString(1);
-        String schema = set.getString(2);
-        String name = set.getString(3);
-        tables.add(new TableRef(catalog, schema, name));
-      }
-
-      set.close();
-      return tables;
-    }
   }
 
   private void selectedTableChanged() {
@@ -126,11 +139,30 @@ public class TableChooserPanel extends ConfigStepPanel {
       new SwingWorker<Map<String, String>, Void>() {
         @Override
         protected Map<String, String> doInBackground() throws Exception {
-          return fetchTableStructure(selected);
+          setBackgroundTaskStatus("fetching table structure for " + selected);
+
+          try (Connection c = getConnection()) {
+            Map<String, String> columns = new LinkedHashMap<>();
+
+            DatabaseMetaData metadata = c.getMetaData();
+            ResultSet set = metadata.getColumns(selected.catalog, selected.schema, selected.name, null);
+            while (set.next()) {
+              String name = set.getString(4);
+              String type = set.getString(6);
+              int size = set.getInt(7);
+
+              columns.put(name, type + "(" + size + ")");
+            }
+
+            set.close();
+            return columns;
+          }
         }
 
         @Override
         protected void done() {
+          setBackgroundTaskStatus(null);
+
           try {
             tableToColumnsMap.put(selected, get());
             selectedTableChanged();
@@ -144,53 +176,19 @@ public class TableChooserPanel extends ConfigStepPanel {
     }
   }
 
-  private Map<String, String> fetchTableStructure(TableRef table) throws SQLException {
-    try (Connection c = getConnection()) {
-      Map<String, String> columns = new LinkedHashMap<>();
-
-      DatabaseMetaData metadata = c.getMetaData();
-      ResultSet set = metadata.getColumns(table.catalog, table.schema, table.name, null);
-      while (set.next()) {
-        String name = set.getString(4);
-        String type = set.getString(6);
-        int size = set.getInt(7);
-
-        columns.put(name, type + "(" + size + ")");
-      }
-
-      set.close();
-      return columns;
-    }
-  }
-
-  @Override
-  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
-    String table = config.getTable();
-    tableList.setSelectedValue(table, true);
-    truncateCheckbox.setSelected(config.isAppend() == null || !config.isAppend());
-  }
-
-  @Override
-  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
-    verifyNotEmpty("Table", tableList.getSelectedValue());
-
-    config.setTable(tableList.getSelectedValue().toString());
-    config.setAppend(!truncateCheckbox.isSelected());
-  }
-
   public static class TableRef {
     public static char TABLE_SEP = '.';
-    
+
     final String catalog;
     final String schema;
     final String name;
-    
+
     public TableRef(String name) {
       int nameIndex = name.lastIndexOf(TABLE_SEP);
       if (nameIndex >= 0) {
         this.name = name.substring(nameIndex + 1);
         int schemaIndex = name.lastIndexOf(TABLE_SEP, nameIndex - 1);
-        
+
         if (schemaIndex >= 0) {
           this.schema = name.substring(schemaIndex + 1, nameIndex);
           this.catalog = name.substring(0, schemaIndex);

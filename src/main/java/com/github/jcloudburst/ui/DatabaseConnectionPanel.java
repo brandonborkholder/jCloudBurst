@@ -1,26 +1,24 @@
 package com.github.jcloudburst.ui;
 
-import static javax.swing.JOptionPane.showMessageDialog;
-
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.github.jcloudburst.ConfigurationType;
 import com.github.jcloudburst.JDBCType;
 
 @SuppressWarnings("serial")
@@ -31,12 +29,18 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
 
   private JButton testButton;
 
+  private JLabel connectionStatusLabel;
+
+  private ConfigPartialState lastVerifiedState;
+
   public DatabaseConnectionPanel() {
     super("Database");
     jdbcUrlField = new JTextField();
     jdbcUsernameField = new JTextField();
     jdbcPasswordField = new JPasswordField();
     testButton = new JButton("Test Connection");
+    connectionStatusLabel = new JLabel();
+    connectionStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
     testButton.addActionListener(new ActionListener() {
       @Override
@@ -55,7 +59,9 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
     add(jdbcPasswordField, "grow,wrap");
 
     add(new JSeparator(), "span,grow,wrap");
-    add(testButton, "span,right,wrap");
+
+    add(testButton, "right");
+    add(connectionStatusLabel, "grow");
   }
 
   @Override
@@ -63,15 +69,19 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
     jdbcUrlField.setText(config.getJdbc().getUrl());
     jdbcUsernameField.setText(config.getJdbc().getUsername());
     jdbcPasswordField.setText(config.getJdbc().getPassword());
+
+    setStatus("connection not verified", false);
+
+    if (lastVerifiedState == null || !lastVerifiedState.equals(new ConnectionState(config))) {
+      if (canVerifyConnection()) {
+        verifyConnection();
+      }
+    }
   }
 
   @Override
-  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
+  protected void flushUIToConfiguration() throws IllegalStateException {
     JDBCType jdbc = config.getJdbc();
-    if (jdbc == null) {
-      jdbc = new JDBCType();
-      config.setJdbc(jdbc);
-    }
 
     verifyNotEmpty("URL", jdbcUrlField.getText());
 
@@ -80,10 +90,14 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
     jdbc.setPassword(new String(jdbcPasswordField.getPassword()));
   }
 
+  private boolean canVerifyConnection() {
+    return jdbcUrlField.getText().startsWith("jdbc:");
+  }
+
   private void verifyConnection() {
     final String url = jdbcUrlField.getText();
-    final String username = jdbcUsernameField.getText();
-    final String password = new String(jdbcPasswordField.getPassword());
+    final String user = jdbcUsernameField.getText();
+    final String pass = new String(jdbcPasswordField.getPassword());
 
     new SwingWorker<Void, Void>() {
       @Override
@@ -99,24 +113,56 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
           query = "SELECT 1";
         }
 
-        try (Connection connection = DriverManager.getConnection(url, username, password)) {
+        setBackgroundTaskStatus("connecting to database ...");
+        try (Connection connection = DriverManager.getConnection(url, user, pass)) {
           Statement statement = connection.createStatement();
+          statement.setQueryTimeout(1);
           ResultSet set = statement.executeQuery(query);
           set.next();
         }
 
+        lastVerifiedState = new ConnectionState(url, user, pass);
+
         return null;
       }
 
-      @Override
       protected void done() {
+        setBackgroundTaskStatus(null);
+
+        String status = String.format("connection to %s (%s) ", url, user.isEmpty() ? "no user" : "as " + user);
         try {
           get();
-          showMessageDialog(DatabaseConnectionPanel.this, "Connection successful!", "Success!", JOptionPane.INFORMATION_MESSAGE);
+          status += "is successful!";
+          setStatus(status, true);
         } catch (Exception e) {
-          showMessageDialog(DatabaseConnectionPanel.this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
+          e.printStackTrace();
+          status += "failed: " + e.getMessage();
+          setStatus(status, false);
         }
+
       }
     }.execute();
+  }
+
+  private void setStatus(String status, boolean success) {
+    connectionStatusLabel.setText(status);
+
+    if (success) {
+      connectionStatusLabel.setForeground(getForeground());
+    } else {
+      connectionStatusLabel.setForeground(Color.red);
+    }
+  }
+
+  public static class ConnectionState extends ConfigPartialState {
+    public ConnectionState(ConfigurationType c) {
+      this(c.getJdbc().getUrl(), c.getJdbc().getUsername(), c.getJdbc().getPassword());
+    }
+
+    public ConnectionState(String url, String user, String pass) {
+      add("URL", url);
+      add("Username", user);
+      add("Password", pass);
+    }
   }
 }
