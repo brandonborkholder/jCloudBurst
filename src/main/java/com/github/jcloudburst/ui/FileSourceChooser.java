@@ -2,8 +2,6 @@ package com.github.jcloudburst.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.io.IOException;
-import java.sql.SQLException;
 
 import javax.swing.JTabbedPane;
 
@@ -26,14 +24,14 @@ public class FileSourceChooser extends ConfigStepPanel {
   }
 
   @Override
-  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
+  protected void flushConfigurationToUI() throws IllegalStateException {
     for (Component c : tabs.getComponents()) {
       ((ConfigStepPanel) c).loadConfiguration(config);
     }
   }
 
   @Override
-  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
+  protected void flushUIToConfiguration() throws IllegalStateException {
     ((ConfigStepPanel) tabs.getSelectedComponent()).saveToConfiguration(config);
   }
 }

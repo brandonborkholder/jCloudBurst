@@ -18,7 +18,7 @@ public class TestGUI {
     config.setJdbc(new JDBCType());
     config.getJdbc().setUrl(jdbc);
     
-    config.setTable("test");
+    config.setTable("TEST.PUBLIC.TEST");
     config.setAppend(false);
     config.setFailOnMissingColumn(true);
     DelimitedSource src = new DelimitedSource();

@@ -118,7 +118,7 @@ public class TableChooserPanel extends ConfigStepPanel {
           tableList.setModel(model);
 
           if (tableToSetOnDone != null) {
-            tableList.setSelectedValue(tableToSetOnDone, true);
+            tableList.setSelectedValue(new TableRef(tableToSetOnDone), true);
           }
         } catch (Exception e) {
           e.printStackTrace();
@@ -224,6 +224,50 @@ public class TableChooserPanel extends ConfigStepPanel {
 
       b.append(name);
       return b.toString();
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((catalog == null) ? 0 : catalog.hashCode());
+      result = prime * result + ((name == null) ? 0 : name.hashCode());
+      result = prime * result + ((schema == null) ? 0 : schema.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof TableRef)) {
+        return false;
+      }
+
+      TableRef other = (TableRef) obj;
+      if (catalog == null) {
+        if (other.catalog != null) {
+          return false;
+        }
+      } else if (!catalog.equals(other.catalog)) {
+        return false;
+      }
+
+      if (name == null) {
+        if (other.name != null) {
+          return false;
+        }
+      } else if (!name.equals(other.name)) {
+        return false;
+      }
+
+      if (schema == null) {
+        if (other.schema != null) {
+          return false;
+        }
+      } else if (!schema.equals(other.schema)) {
+        return false;
+      }
+
+      return true;
     }
   }
 

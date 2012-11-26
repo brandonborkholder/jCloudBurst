@@ -9,13 +9,14 @@ import javax.swing.AbstractCellEditor;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JTable;
+import javax.swing.SwingUtilities;
 import javax.swing.table.TableCellEditor;
 
 @SuppressWarnings("serial")
 public class FileChooserEditor extends AbstractCellEditor implements TableCellEditor {
-  private static String lastDir = ".";
+  private static File lastDir = new File(".");
 
-  private String path;
+  private File path;
 
   @Override
   public Object getCellEditorValue() {
@@ -24,21 +25,34 @@ public class FileChooserEditor extends AbstractCellEditor implements TableCellEd
 
   @Override
   public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-    path = (String) value;
+    path = (File) value;
     JFileChooser chooser = new JFileChooser(path == null ? lastDir : path);
     chooser.setMultiSelectionEnabled(false);
 
     int result = chooser.showOpenDialog(table);
     if (result == JFileChooser.APPROVE_OPTION) {
       File chosen = chooser.getSelectedFile();
-      path = chosen.toString();
-      lastDir = chosen.getParent();
-      fireEditingStopped();
+      path = chosen;
+      lastDir = chosen.getParentFile();
+      fireDelayedEditEvent(true);
     } else {
-      fireEditingCanceled();
+      fireDelayedEditEvent(false);
     }
 
-    return new JLabel(path);
+    return new JLabel(path == null ? "" : path.toString());
+  }
+
+  private void fireDelayedEditEvent(final boolean stopped) {
+    SwingUtilities.invokeLater(new Runnable() {
+      @Override
+      public void run() {
+        if (stopped) {
+          fireEditingStopped();
+        } else {
+          fireEditingCanceled();
+        }
+      }
+    });
   }
 
   public boolean isCellEditable(EventObject evt) {

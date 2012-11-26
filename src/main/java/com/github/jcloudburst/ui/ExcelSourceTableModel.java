@@ -1,21 +1,31 @@
 package com.github.jcloudburst.ui;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.Icon;
 import javax.swing.table.AbstractTableModel;
 
 import com.github.jcloudburst.ExcelSource;
 
 @SuppressWarnings("serial")
-public class ExcelSourceTableModel extends AbstractTableModel {
+public class ExcelSourceTableModel extends AbstractTableModel implements EditableTableModel {
+  public static final int DELETE_COL = 0;
+  public static final int FILE_COL = 1;
+  public static final int SHEET_COL = 2;
+  public static final int HAS_HEADER_COL = 3;
+  public static final int NUM_COLS = 4;
+
   List<ExcelSource> sourcesList = new ArrayList<ExcelSource>();
 
+  @Override
   public void addRow() {
     sourcesList.add(new ExcelSource());
     fireTableDataChanged();
   }
 
+  @Override
   public void removeRow(int row) {
     sourcesList.remove(row);
     fireTableDataChanged();
@@ -23,29 +33,32 @@ public class ExcelSourceTableModel extends AbstractTableModel {
 
   @Override
   public boolean isCellEditable(int rowIndex, int columnIndex) {
-    return true;
+    return !(rowIndex == sourcesList.size() && columnIndex == DELETE_COL);
   }
 
   @Override
   public int getRowCount() {
-    return sourcesList.size();
+    return sourcesList.size() + 1;
   }
 
   @Override
   public int getColumnCount() {
-    return 3;
+    return NUM_COLS;
   }
 
   @Override
   public Class<?> getColumnClass(int columnIndex) {
     switch (columnIndex) {
-    case 0:
+    case DELETE_COL:
+      return Icon.class;
+
+    case FILE_COL:
+      return File.class;
+
+    case SHEET_COL:
       return String.class;
 
-    case 1:
-      return String.class;
-
-    case 2:
+    case HAS_HEADER_COL:
       return Boolean.class;
 
     default:
@@ -56,13 +69,16 @@ public class ExcelSourceTableModel extends AbstractTableModel {
   @Override
   public String getColumnName(int column) {
     switch (column) {
-    case 0:
+    case DELETE_COL:
+      return "Delete";
+
+    case FILE_COL:
       return "File";
 
-    case 1:
+    case SHEET_COL:
       return "Sheet";
 
-    case 2:
+    case HAS_HEADER_COL:
       return "Header Row?";
 
     default:
@@ -72,15 +88,22 @@ public class ExcelSourceTableModel extends AbstractTableModel {
 
   @Override
   public Object getValueAt(int rowIndex, int columnIndex) {
+    if (rowIndex == sourcesList.size()) {
+      return null;
+    }
+
     ExcelSource row = sourcesList.get(rowIndex);
     switch (columnIndex) {
-    case 0:
-      return row.getFile();
+    case DELETE_COL:
+      return Icons.deleteIcon;
 
-    case 1:
+    case FILE_COL:
+      return row.getFile() == null ? null : new File(row.getFile());
+
+    case SHEET_COL:
       return row.getExcelSheet();
 
-    case 2:
+    case HAS_HEADER_COL:
       return row.isHasHeaderRow();
 
     default:
@@ -90,22 +113,29 @@ public class ExcelSourceTableModel extends AbstractTableModel {
 
   @Override
   public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
+    if (rowIndex == sourcesList.size()) {
+      addRow();
+    }
+
     ExcelSource row = sourcesList.get(rowIndex);
     switch (columnIndex) {
-    case 0:
-      row.setFile((String) aValue);
+    case FILE_COL:
+      File f = (File) aValue;
+      row.setFile(f == null || f.toString().isEmpty() ? null : f.toString());
       break;
 
-    case 1:
+    case SHEET_COL:
       row.setExcelSheet((String) aValue);
       break;
 
-    case 2:
+    case HAS_HEADER_COL:
       row.setHasHeaderRow((Boolean) aValue);
       break;
 
     default:
       throw new AssertionError("Illegal column index");
     }
+
+    fireTableCellUpdated(rowIndex, columnIndex);
   }
 }

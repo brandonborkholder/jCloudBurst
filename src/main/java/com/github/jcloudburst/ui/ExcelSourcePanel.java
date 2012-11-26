@@ -1,11 +1,8 @@
 package com.github.jcloudburst.ui;
 
-import java.io.IOException;
-import java.sql.SQLException;
+import java.awt.BorderLayout;
 
 import javax.swing.JScrollPane;
-
-import net.miginfocom.swing.MigLayout;
 
 @SuppressWarnings("serial")
 public class ExcelSourcePanel extends ConfigStepPanel {
@@ -15,19 +12,17 @@ public class ExcelSourcePanel extends ConfigStepPanel {
     super("Excel");
     table = new ExcelSourceTable();
 
-    setLayout(new MigLayout("", "[grow|grow]", "[grow]"));
-    add(new JScrollPane(table), "span,grow,wrap");
-    add(table.getDeleteButton(), "left");
-    add(table.getAddButton(), "right");
+    setLayout(new BorderLayout());
+    add(new JScrollPane(table), BorderLayout.CENTER);
   }
 
   @Override
-  protected void flushConfigurationToUI() throws SQLException, IOException, IllegalStateException {
+  protected void flushConfigurationToUI() throws IllegalStateException {
     table.initFrom(config.getExcel());
   }
 
   @Override
-  protected void flushUIToConfiguration() throws SQLException, IOException, IllegalStateException {
+  protected void flushUIToConfiguration() throws IllegalStateException {
     config.getExcel().clear();
     config.getExcel().addAll(table.getSourcesList());
   }
