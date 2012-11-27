@@ -18,8 +18,7 @@ import javax.swing.SwingWorker;
 
 import net.miginfocom.swing.MigLayout;
 
-import com.github.jcloudburst.ConfigurationType;
-import com.github.jcloudburst.JDBCType;
+import com.github.jcloudburst.config.ImportConfig;
 
 @SuppressWarnings("serial")
 public class DatabaseConnectionPanel extends ConfigStepPanel {
@@ -66,9 +65,9 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
 
   @Override
   protected void flushConfigurationToUI() {
-    jdbcUrlField.setText(config.getJdbc().getUrl());
-    jdbcUsernameField.setText(config.getJdbc().getUsername());
-    jdbcPasswordField.setText(config.getJdbc().getPassword());
+    jdbcUrlField.setText(config.getJdbcUrl());
+    jdbcUsernameField.setText(config.getJdbcUsername());
+    jdbcPasswordField.setText(config.getJdbcPassword());
 
     setStatus("connection not verified", false);
 
@@ -81,13 +80,11 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
 
   @Override
   protected void flushUIToConfiguration() throws IllegalStateException {
-    JDBCType jdbc = config.getJdbc();
-
     verifyNotEmpty("URL", jdbcUrlField.getText());
 
-    jdbc.setUrl(jdbcUrlField.getText());
-    jdbc.setUsername(jdbcUsernameField.getText());
-    jdbc.setPassword(new String(jdbcPasswordField.getPassword()));
+    config.setJdbcUrl(jdbcUrlField.getText());
+    config.setJdbcUsername(jdbcUsernameField.getText());
+    config.setJdbcPassword(new String(jdbcPasswordField.getPassword()));
   }
 
   private boolean canVerifyConnection() {
@@ -155,8 +152,8 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
   }
 
   public static class ConnectionState extends ConfigPartialState {
-    public ConnectionState(ConfigurationType c) {
-      this(c.getJdbc().getUrl(), c.getJdbc().getUsername(), c.getJdbc().getPassword());
+    public ConnectionState(ImportConfig c) {
+      this(c.getJdbcUrl(), c.getJdbcUsername(), c.getJdbcPassword());
     }
 
     public ConnectionState(String url, String user, String pass) {

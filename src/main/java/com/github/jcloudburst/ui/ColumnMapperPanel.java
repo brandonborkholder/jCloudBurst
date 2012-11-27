@@ -35,8 +35,8 @@ import com.github.jcloudburst.ColumnMapType;
 import com.github.jcloudburst.ColumnsMapGuesser;
 import com.github.jcloudburst.DelimitedFileReader;
 import com.github.jcloudburst.DelimitedSource;
+import com.github.jcloudburst.config.TableRef;
 import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
-import com.github.jcloudburst.ui.TableChooserPanel.TableRef;
 
 @SuppressWarnings("serial")
 public class ColumnMapperPanel extends ConfigStepPanel {

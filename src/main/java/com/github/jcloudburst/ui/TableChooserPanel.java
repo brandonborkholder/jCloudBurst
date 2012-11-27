@@ -25,6 +25,7 @@ import javax.swing.table.AbstractTableModel;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.github.jcloudburst.config.TableRef;
 import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
 
 @SuppressWarnings("serial")
@@ -68,18 +69,18 @@ public class TableChooserPanel extends ConfigStepPanel {
       populateTables(config.getTable());
     }
 
-    truncateCheckbox.setSelected(config.isAppend() == null || !config.isAppend());
+    truncateCheckbox.setSelected(config.isTruncateTable());
   }
 
   @Override
   protected void flushUIToConfiguration() throws IllegalStateException {
     verifyNotEmpty("Table", tableList.getSelectedValue());
 
-    config.setTable(tableList.getSelectedValue().toString());
-    config.setAppend(!truncateCheckbox.isSelected());
+    config.setTable(tableList.getSelectedValue());
+    config.setTruncateTable(truncateCheckbox.isSelected());
   }
 
-  private void populateTables(final String tableToSetOnDone) {
+  private void populateTables(final TableRef tableToSetOnDone) {
     tableList.setModel(new DefaultListModel<TableRef>());
     tableToColumnsMap.clear();
 
@@ -118,7 +119,7 @@ public class TableChooserPanel extends ConfigStepPanel {
           tableList.setModel(model);
 
           if (tableToSetOnDone != null) {
-            tableList.setSelectedValue(new TableRef(tableToSetOnDone), true);
+            tableList.setSelectedValue(tableToSetOnDone, true);
           }
         } catch (Exception e) {
           e.printStackTrace();
@@ -173,101 +174,6 @@ public class TableChooserPanel extends ConfigStepPanel {
       }.execute();
     } else {
       columnsTable.setModel(new MapTableModel(columns));
-    }
-  }
-
-  public static class TableRef {
-    public static char TABLE_SEP = '.';
-
-    final String catalog;
-    final String schema;
-    final String name;
-
-    public TableRef(String name) {
-      int nameIndex = name.lastIndexOf(TABLE_SEP);
-      if (nameIndex >= 0) {
-        this.name = name.substring(nameIndex + 1);
-        int schemaIndex = name.lastIndexOf(TABLE_SEP, nameIndex - 1);
-
-        if (schemaIndex >= 0) {
-          this.schema = name.substring(schemaIndex + 1, nameIndex);
-          this.catalog = name.substring(0, schemaIndex);
-        } else {
-          this.schema = name.substring(0, nameIndex);
-          this.catalog = null;
-        }
-      } else {
-        this.name = name;
-        this.schema = null;
-        this.catalog = null;
-      }
-    }
-
-    public TableRef(String catalog, String schema, String name) {
-      this.catalog = catalog;
-      this.schema = schema;
-      this.name = name;
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder b = new StringBuilder();
-      if (catalog != null) {
-        b.append(catalog);
-        b.append(TABLE_SEP);
-      }
-
-      if (schema != null) {
-        b.append(schema);
-        b.append(TABLE_SEP);
-      }
-
-      b.append(name);
-      return b.toString();
-    }
-
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ((catalog == null) ? 0 : catalog.hashCode());
-      result = prime * result + ((name == null) ? 0 : name.hashCode());
-      result = prime * result + ((schema == null) ? 0 : schema.hashCode());
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (!(obj instanceof TableRef)) {
-        return false;
-      }
-
-      TableRef other = (TableRef) obj;
-      if (catalog == null) {
-        if (other.catalog != null) {
-          return false;
-        }
-      } else if (!catalog.equals(other.catalog)) {
-        return false;
-      }
-
-      if (name == null) {
-        if (other.name != null) {
-          return false;
-        }
-      } else if (!name.equals(other.name)) {
-        return false;
-      }
-
-      if (schema == null) {
-        if (other.schema != null) {
-          return false;
-        }
-      } else if (!schema.equals(other.schema)) {
-        return false;
-      }
-
-      return true;
     }
   }
 

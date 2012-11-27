@@ -7,7 +7,7 @@ import java.util.List;
 import javax.swing.Icon;
 import javax.swing.table.AbstractTableModel;
 
-import com.github.jcloudburst.ExcelSource;
+import com.github.jcloudburst.config.ExcelSource;
 
 @SuppressWarnings("serial")
 public class ExcelSourceTableModel extends AbstractTableModel implements EditableTableModel {
@@ -98,13 +98,13 @@ public class ExcelSourceTableModel extends AbstractTableModel implements Editabl
       return Icons.deleteIcon;
 
     case FILE_COL:
-      return row.getFile() == null ? null : new File(row.getFile());
+      return row.file;
 
     case SHEET_COL:
-      return row.getExcelSheet();
+      return row.excelSheet;
 
     case HAS_HEADER_COL:
-      return row.isHasHeaderRow();
+      return row.hasHeaderRow;
 
     default:
       throw new AssertionError("Illegal column index");
@@ -121,21 +121,22 @@ public class ExcelSourceTableModel extends AbstractTableModel implements Editabl
     switch (columnIndex) {
     case FILE_COL:
       File f = (File) aValue;
-      row.setFile(f == null || f.toString().isEmpty() ? null : f.toString());
+      row = row.withFile(f);
       break;
 
     case SHEET_COL:
-      row.setExcelSheet((String) aValue);
+      row = row.withExcelSheet((String) aValue);
       break;
 
     case HAS_HEADER_COL:
-      row.setHasHeaderRow((Boolean) aValue);
+      row = row.withHasHeaderRow(Boolean.TRUE.equals(aValue));
       break;
 
     default:
       throw new AssertionError("Illegal column index");
     }
 
+    sourcesList.set(rowIndex, row);
     fireTableCellUpdated(rowIndex, columnIndex);
   }
 }

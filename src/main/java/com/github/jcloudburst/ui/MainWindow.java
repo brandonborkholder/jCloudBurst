@@ -15,14 +15,14 @@ import javax.swing.UIManager;
 
 import net.miginfocom.swing.MigLayout;
 
-import com.github.jcloudburst.ConfigurationType;
+import com.github.jcloudburst.config.ImportConfig;
 
 @SuppressWarnings("serial")
 public class MainWindow extends JFrame {
   protected CardLayout switcherLayout;
   protected JPanel switcherPanel;
 
-  protected ConfigurationType config;
+  protected ImportConfig config;
 
   protected int currentStep;
   protected List<ConfigStepPanel> steps;
@@ -30,7 +30,7 @@ public class MainWindow extends JFrame {
   protected JButton nextButton;
   protected JButton backButton;
 
-  public MainWindow(ConfigurationType config) {
+  public MainWindow(ImportConfig config) {
     this.config = config;
 
     switcherLayout = new CardLayout();
@@ -73,9 +73,9 @@ public class MainWindow extends JFrame {
     add(switcherPanel, "span,grow,wrap");
     add(backButton, "left");
     add(nextButton, "right");
-    
+
     try {
-    steps.get(currentStep).loadConfiguration(config);
+      steps.get(currentStep).loadConfiguration(config);
     } catch (Exception e) {
       e.printStackTrace();
       JOptionPane.showMessageDialog(this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
@@ -113,7 +113,7 @@ public class MainWindow extends JFrame {
   public static void main(String[] args) throws Exception {
     UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
-    MainWindow window = new MainWindow(new ConfigurationType());
+    MainWindow window = new MainWindow(new ImportConfig());
     window.setPreferredSize(new Dimension(1024, 768));
     window.pack();
     window.setLocationRelativeTo(null);

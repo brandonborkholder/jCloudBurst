@@ -9,7 +9,7 @@ import java.util.List;
 
 import javax.swing.JTable;
 
-import com.github.jcloudburst.ExcelSource;
+import com.github.jcloudburst.config.ExcelSource;
 
 @SuppressWarnings("serial")
 public class ExcelSourceTable extends JTable {

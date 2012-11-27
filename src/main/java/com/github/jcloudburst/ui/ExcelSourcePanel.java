@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 
 import javax.swing.JScrollPane;
 
+import com.github.jcloudburst.config.ExcelSource;
+
 @SuppressWarnings("serial")
 public class ExcelSourcePanel extends ConfigStepPanel {
   private ExcelSourceTable table;
@@ -18,12 +20,14 @@ public class ExcelSourcePanel extends ConfigStepPanel {
 
   @Override
   protected void flushConfigurationToUI() throws IllegalStateException {
-    table.initFrom(config.getExcel());
+    table.initFrom(config.getExcelSources());
   }
 
   @Override
   protected void flushUIToConfiguration() throws IllegalStateException {
-    config.getExcel().clear();
-    config.getExcel().addAll(table.getSourcesList());
+    config.clearExcelSources();
+    for (ExcelSource src : table.getSourcesList()) {
+      config.add(src);
+    }
   }
 }

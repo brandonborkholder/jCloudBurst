@@ -9,22 +9,22 @@ import java.util.TreeMap;
 
 import javax.swing.JPanel;
 
-import com.github.jcloudburst.ConfigurationType;
+import com.github.jcloudburst.config.ImportConfig;
 
 @SuppressWarnings("serial")
 public abstract class ConfigStepPanel extends JPanel {
-  protected ConfigurationType config;
+  protected ImportConfig config;
 
   public ConfigStepPanel(String name) {
     setName(name);
   }
 
-  public void loadConfiguration(ConfigurationType config) throws IllegalStateException {
+  public void loadConfiguration(ImportConfig config) throws IllegalStateException {
     this.config = config;
     flushConfigurationToUI();
   }
 
-  public void saveToConfiguration(ConfigurationType config) throws IllegalStateException {
+  public void saveToConfiguration(ImportConfig config) throws IllegalStateException {
     this.config = config;
     flushUIToConfiguration();
   }
@@ -44,7 +44,7 @@ public abstract class ConfigStepPanel extends JPanel {
   }
 
   protected Connection getConnection() throws SQLException {
-    return DriverManager.getConnection(config.getJdbc().getUrl(), config.getJdbc().getUsername(), config.getJdbc().getPassword());
+    return DriverManager.getConnection(config.getJdbcUrl(), config.getJdbcUsername(), config.getJdbcPassword());
   }
 
   public static class ConfigPartialState {

@@ -1,11 +1,15 @@
 package com.github.jcloudburst;
 
 import java.awt.Dimension;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
 import javax.swing.JFrame;
 
+import com.github.jcloudburst.config.ColumnSource;
+import com.github.jcloudburst.config.DelimitedSource;
+import com.github.jcloudburst.config.ImportConfig;
 import com.github.jcloudburst.ui.MainWindow;
 
 public class TestGUI {
@@ -14,30 +18,20 @@ public class TestGUI {
     Connection c = DriverManager.getConnection(jdbc);
     c.createStatement().executeUpdate("create table test (a varchar(100), b double)");
 
-    ConfigurationType config = new ConfigurationType();
-    config.setJdbc(new JDBCType());
-    config.getJdbc().setUrl(jdbc);
-    
+    ImportConfig config = new ImportConfig();
+    config.setJdbcUrl(jdbc);
+
     config.setTable("TEST.PUBLIC.TEST");
-    config.setAppend(false);
+    config.setTruncateTable(true);
     config.setFailOnMissingColumn(true);
-    DelimitedSource src = new DelimitedSource();
-    src.setFile(TestGUI.class.getClassLoader().getResource("Test1.csv").getFile());
-    src.setHasHeaderRow(true);
-    src.setSeparatorChar(",");
-    config.getCsv().add(src);
-    
-    config.setMapping(new ColumnsType());
-    
-    ColumnMapType map = new ColumnMapType();
-    map.setDbColumn("a");
-    map.setFileColName("char");
-    config.getMapping().getColumn().add(map);
-    
-    map = new ColumnMapType();
-    map.setDbColumn("b");
-    map.setFileColIndex(1);
-    config.getMapping().getColumn().add(map);
+    DelimitedSource src = new DelimitedSource()
+        .withFile(new File(TestGUI.class.getClassLoader().getResource("Test1.csv").getFile()))
+        .withHasHeaderRow(true)
+        .withSeparator(",");
+    config.add(src);
+
+    config.setColumnSource("a", new ColumnSource().withFileFieldName("char"));
+    config.setColumnSource("b", new ColumnSource().withFileFieldIndex(1));
 
     MainWindow window = new MainWindow(config);
     window.setPreferredSize(new Dimension(1024, 768));

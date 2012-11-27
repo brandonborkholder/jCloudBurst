@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 
 import javax.swing.JScrollPane;
 
+import com.github.jcloudburst.config.DelimitedSource;
+
 @SuppressWarnings("serial")
 public class DelimitedSourcePanel extends ConfigStepPanel {
   private DelimitedSourceTable table;
@@ -18,12 +20,14 @@ public class DelimitedSourcePanel extends ConfigStepPanel {
 
   @Override
   protected void flushConfigurationToUI() throws IllegalStateException {
-    table.initFrom(config.getCsv());
+    table.initFrom(config.getDelimitedSources());
   }
 
   @Override
   protected void flushUIToConfiguration() throws IllegalStateException {
-    config.getCsv().clear();
-    config.getCsv().addAll(table.getSourcesList());
+    config.clearDelimitedSources();
+    for (DelimitedSource src : table.getSourcesList()) {
+      config.add(src);
+    }
   }
 }

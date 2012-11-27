@@ -9,7 +9,7 @@ import java.util.List;
 
 import javax.swing.JTable;
 
-import com.github.jcloudburst.DelimitedSource;
+import com.github.jcloudburst.config.DelimitedSource;
 
 @SuppressWarnings("serial")
 public class DelimitedSourceTable extends JTable {
