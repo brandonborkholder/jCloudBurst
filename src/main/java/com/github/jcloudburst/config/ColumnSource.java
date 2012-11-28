@@ -20,6 +20,10 @@ public class ColumnSource {
     this.fixedValue = fixedValue;
   }
 
+  public boolean isValid() {
+    return fileFieldIndex >= 0 || fileFieldName != null || fixedValue != null;
+  }
+
   public DateFormat getDateFormat() {
     return new SimpleDateFormat(dateFormatString);
   }

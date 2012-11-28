@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import javax.swing.JCheckBox;
@@ -35,12 +36,13 @@ import com.github.jcloudburst.ColumnMapType;
 import com.github.jcloudburst.ColumnsMapGuesser;
 import com.github.jcloudburst.DelimitedFileReader;
 import com.github.jcloudburst.DelimitedSource;
+import com.github.jcloudburst.config.ColumnSource;
 import com.github.jcloudburst.config.TableRef;
 import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
 
 @SuppressWarnings("serial")
 public class ColumnMapperPanel extends ConfigStepPanel {
-  private List<ColumnMapType> columnMaps;
+  private Map<String, ColumnSource> columnSources;
 
   private ConnectionState lastColumnsState;
   private List<ColumnInfo> columns;
@@ -55,14 +57,15 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   @Override
   protected void flushConfigurationToUI() throws IllegalStateException {
     removeAll();
-    
+
     ensureHasColumns();
   }
 
   @Override
   protected void flushUIToConfiguration() throws IllegalStateException {
-    config.getMapping().getColumn().clear();
-    config.getMapping().getColumn().addAll(columnMaps);
+    for (Entry<String, ColumnSource> entry : columnSources.entrySet()) {
+      config.setColumnSource(entry.getKey(), entry.getValue());
+    }
   }
 
   private void ensureHasColumns() {
@@ -91,15 +94,15 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
   private List<ColumnInfo> getColumns() throws SQLException {
     try (Connection c = getConnection()) {
-      TableRef tableRef = new TableRef(config.getTable());
+      TableRef tableRef = config.getTable();
       DatabaseMetaData metadata = c.getMetaData();
       ResultSet set = metadata.getColumns(tableRef.catalog, tableRef.schema, tableRef.name, null);
-  
+
       List<ColumnInfo> columns = new ArrayList<>();
       while (set.next()) {
         columns.add(new ColumnInfo(set));
       }
-  
+
       set.close();
       Collections.sort(columns);
       return columns;
@@ -142,7 +145,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         header.close();
       }
     }
-  
+
     List<FieldInfo> fields = null;
     if (fieldNames != null) {
       fields = new ArrayList<>(fieldNames.size());
@@ -150,17 +153,17 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         FieldInfo field = new FieldInfo();
         field.name = name;
         field.index = fields.size();
-  
+
         fields.add(field);
       }
     }
-  
+
     return fields;
   }
 
   private void setupUI() {
     removeAll();
-    
+
     initializeColumnMaps();
 
     JPanel listPanel = new JPanel(new MigLayout("", "[|grow,sg|grow,sg|grow,sg|grow,sg]"));
@@ -170,7 +173,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     listPanel.add(new JLabel("Fixed Value"));
     listPanel.add(new JLabel("Date Format"), "wrap");
 
-    for (int index = 0; index < columnMaps.size(); index++) {
+    for (int index = 0; index < columnSources.size(); index++) {
       addColumn(index, listPanel);
     }
 
@@ -181,14 +184,14 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
   private void addColumn(final int index, JPanel container) {
     final ColumnInfo column = columns.get(index);
-    final ColumnMapType map = columnMaps.get(index);
-  
+    final ColumnSource src = columnSources.get(column.name);
+
     final JCheckBox skipBox = new JCheckBox();
     JLabel columnInfoLabel = new JLabel(column.name + " (" + column.typeName + ")");
     final JComboBox<FieldInfo> fieldChooser = new JComboBox<>(fields.toArray(new FieldInfo[fields.size()]));
     final JTextField dateFormatField = new JTextField("yyyy-MM-dd HH:mm:ss");
     final JTextField fixedValueField = new JTextField();
-  
+
     skipBox.addItemListener(new ItemListener() {
       @Override
       public void itemStateChanged(ItemEvent e) {
@@ -197,75 +200,81 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         fixedValueField.setEnabled(!skipBox.isSelected());
       }
     });
-  
+
     if (column.isDate()) {
       dateFormatField.getDocument().addDocumentListener(new DocumentListener() {
         @Override
         public void removeUpdate(DocumentEvent e) {
           changedUpdate(e);
         }
-  
+
         @Override
         public void insertUpdate(DocumentEvent e) {
           changedUpdate(e);
         }
-  
+
         @Override
         public void changedUpdate(DocumentEvent e) {
-          map.setFormat(dateFormatField.getText());
+          ColumnSource newSrc = src.withDateFormat(dateFormatField.getText());
+          columnSources.put(column.name, newSrc);
         }
       });
     }
-  
+
     fieldChooser.addItemListener(new ItemListener() {
       @Override
       public void itemStateChanged(ItemEvent e) {
         FieldInfo field = (FieldInfo) fieldChooser.getSelectedItem();
+        ColumnSource newSrc;
         if (field == null) {
-          map.setFileColIndex(null);
-          map.setFileColName(null);
+          newSrc = src.withFileFieldIndex(-1).withFileFieldName(null);
         } else if (field.name == null) {
-          map.setFileColIndex(field.index);
+          newSrc = src.withFileFieldIndex(field.index);
           fixedValueField.setText(null);
         } else {
-          map.setFileColName(field.name);
+          newSrc = src.withFileFieldName(field.name);
           fixedValueField.setText(null);
         }
+
+        columnSources.put(column.name, newSrc);
       }
     });
-  
+
     fixedValueField.getDocument().addDocumentListener(new DocumentListener() {
       @Override
       public void removeUpdate(DocumentEvent e) {
         changedUpdate(e);
       }
-  
+
       @Override
       public void insertUpdate(DocumentEvent e) {
         changedUpdate(e);
       }
-  
+
       @Override
       public void changedUpdate(DocumentEvent e) {
         String text = fixedValueField.getText();
+        ColumnSource newSrc;
         if (text == null || text.isEmpty()) {
-          map.setFixedValue(null);
+          newSrc = src.withFixedValue(null);
         } else {
-          map.setFixedValue(text);
+          newSrc = src.withFixedValue(text);
           fieldChooser.setSelectedItem(null);
         }
+
+        columnSources.put(column.name, newSrc);
       }
     });
-  
+
     skipBox.setEnabled(column.nullable);
     fieldChooser.setSelectedItem(getExistingMap(column));
     dateFormatField.setVisible(column.isDate());
-  
+
     container.add(skipBox, "grow");
     container.add(columnInfoLabel, "grow");
     container.add(fieldChooser, "grow");
     container.add(fixedValueField, "grow");
-  
+
     if (column.isDate()) {
       container.add(dateFormatField, "grow,wrap");
     } else {
@@ -278,32 +287,34 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   }
 
   private void initializeColumnMaps() {
-    Map<String, ColumnMapType> alreadyMapped = new TreeMap<>();
-    for (ColumnMapType map : config.getMapping().getColumn()) {
-      alreadyMapped.put(map.getDbColumn(), map);
+    guessBestMappings();
+
+    for (ColumnInfo column : columns) {
+      ColumnSource src = config.getColumnSource(column.name);
+      if (src != null && src.isValid()) {
+        columnSources.put(column.name, src);
+      }
     }
-    
+  }
+
+  private void guessBestMappings() {
     List<FieldInfo> guessedFields = getGuessedFields(columns, fields);
-    
-    columnMaps = new ArrayList<>(columns.size());
+
+    columnSources = new TreeMap<>();
     for (int i = 0; i < columns.size(); i++) {
       ColumnInfo column = columns.get(i);
-      ColumnMapType map = alreadyMapped.get(column.name);
-      if (map == null) {
-        map = new ColumnMapType();
-        map.setDbColumn(column.name);
-        
-        FieldInfo guessedField = guessedFields.get(i);
-        if (guessedField != null) {
-          if (guessedField.name == null) {
-            map.setFileColIndex(guessedField.index);
-          } else {
-            map.setFileColName(guessedField.name);
-          }
+      ColumnSource src = new ColumnSource();
+
+      FieldInfo guessedField = guessedFields.get(i);
+      if (guessedField != null) {
+        if (guessedField.name == null) {
+          src = src.withFileFieldIndex(guessedField.index);
+        } else {
+          src = src.withFileFieldName(guessedField.name);
         }
       }
-      
-      columnMaps.add(map);
+
+      columnSources.put(column.name, src);
     }
   }
 
@@ -311,20 +322,20 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     if (fields == null) {
       return Arrays.asList(new FieldInfo[columns.size()]);
     }
-  
+
     List<String> colNames = new ArrayList<>(columns.size());
     for (ColumnInfo column : columns) {
       colNames.add(column.name);
     }
-  
+
     List<String> fieldNames = new ArrayList<>(fields.size());
     for (FieldInfo field : fields) {
       fieldNames.add(field.name);
     }
-  
+
     ColumnsMapGuesser guesser = new ColumnsMapGuesser(colNames, fieldNames);
     Map<Integer, Integer> map = new TreeMap<>(guesser.guessMapping());
-  
+
     List<FieldInfo> guessedFields = new ArrayList<>(columns.size());
     for (int i = 0; i < columns.size(); i++) {
       if (map.containsKey(i)) {
@@ -333,31 +344,23 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         guessedFields.add(null);
       }
     }
-  
+
     return guessedFields;
   }
 
   private FieldInfo getExistingMap(ColumnInfo column) {
-    ColumnMapType map = null;
-    for (ColumnMapType m : columnMaps) {
-      if (m.getDbColumn().equals(column.name)) {
-        map = m;
-        break;
-      }
-    }
-    
-    if (map == null) {
-      return null;
-    } else if (map.getFileColIndex() != null ) {
-      return fields.get(map.getFileColIndex());
-    } else if (map.getFileColName() != null) {
+    ColumnSource src = columnSources.get(column.name);
+
+    if (src.fileFieldName != null) {
       for (FieldInfo field : fields) {
-        if (map.getFileColName().equals(field.name)) {
+        if (src.fileFieldName.equals(field.name)) {
           return field;
         }
       }
+    } else if (0 <= src.fileFieldIndex && src.fileFieldIndex < fields.size()) {
+      return fields.get(src.fileFieldIndex);
     }
-    
+
     return null;
   }
 
