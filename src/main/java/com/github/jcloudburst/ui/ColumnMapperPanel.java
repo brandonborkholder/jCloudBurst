@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import javax.swing.JCheckBox;
@@ -32,20 +31,18 @@ import javax.swing.event.DocumentListener;
 
 import net.miginfocom.swing.MigLayout;
 
-import com.github.jcloudburst.ColumnMapType;
 import com.github.jcloudburst.ColumnsMapGuesser;
-import com.github.jcloudburst.DelimitedFileReader;
-import com.github.jcloudburst.DelimitedSource;
+import com.github.jcloudburst.FieldScraper;
 import com.github.jcloudburst.config.ColumnSource;
 import com.github.jcloudburst.config.TableRef;
 import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
 
 @SuppressWarnings("serial")
 public class ColumnMapperPanel extends ConfigStepPanel {
-  private Map<String, ColumnSource> columnSources;
-
   private ConnectionState lastColumnsState;
   private List<ColumnInfo> columns;
+
+  private List<ColumnSource> columnSources;
 
   private FileSourceState lastFieldState;
   private List<FieldInfo> fields;
@@ -63,8 +60,8 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
   @Override
   protected void flushUIToConfiguration() throws IllegalStateException {
-    for (Entry<String, ColumnSource> entry : columnSources.entrySet()) {
-      config.setColumnSource(entry.getKey(), entry.getValue());
+    for (int i = 0; i < columnSources.size(); i++) {
+      config.setColumnSource(i, columnSources.get(i));
     }
   }
 
@@ -134,28 +131,17 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   }
 
   private List<FieldInfo> getFields() throws IOException {
-    List<String> fieldNames = null;
-    for (DelimitedSource source : config.getCsv()) {
-      DelimitedFileReader header = new DelimitedFileReader(source);
-      if (header.getHeader() != null) {
-        fieldNames = header.getHeader();
-        header.close();
-        break;
-      } else {
-        header.close();
-      }
+    FieldScraper scraper = new FieldScraper(config);
+    scraper.read();
+
+    List<String> fieldNames = scraper.getCanonical();
+    if (fieldNames == null) {
+      throw new IOException(scraper.getExplanation());
     }
 
-    List<FieldInfo> fields = null;
-    if (fieldNames != null) {
-      fields = new ArrayList<>(fieldNames.size());
-      for (String name : fieldNames) {
-        FieldInfo field = new FieldInfo();
-        field.name = name;
-        field.index = fields.size();
-
-        fields.add(field);
-      }
+    List<FieldInfo> fields = new ArrayList<>(fieldNames.size());
+    for (int i = 0; i < fieldNames.size(); i++) {
+      fields.add(new FieldInfo(i, fieldNames.get(i)));
     }
 
     return fields;
@@ -184,7 +170,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
   private void addColumn(final int index, JPanel container) {
     final ColumnInfo column = columns.get(index);
-    final ColumnSource src = columnSources.get(column.name);
+    final ColumnSource src = columnSources.get(index);
 
     final JCheckBox skipBox = new JCheckBox();
     JLabel columnInfoLabel = new JLabel(column.name + " (" + column.typeName + ")");
@@ -216,7 +202,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         @Override
         public void changedUpdate(DocumentEvent e) {
           ColumnSource newSrc = src.withDateFormat(dateFormatField.getText());
-          columnSources.put(column.name, newSrc);
+          columnSources.set(index, newSrc);
         }
       });
     }
@@ -236,7 +222,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
           fixedValueField.setText(null);
         }
 
-        columnSources.put(column.name, newSrc);
+        columnSources.set(index, newSrc);
       }
     });
 
@@ -262,12 +248,12 @@ public class ColumnMapperPanel extends ConfigStepPanel {
           fieldChooser.setSelectedItem(null);
         }
 
-        columnSources.put(column.name, newSrc);
+        columnSources.set(index, newSrc);
       }
     });
 
     skipBox.setEnabled(column.nullable);
-    fieldChooser.setSelectedItem(getExistingMap(column));
+    fieldChooser.setSelectedItem(getExistingMap(index));
     dateFormatField.setVisible(column.isDate());
 
     container.add(skipBox, "grow");
@@ -289,10 +275,10 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   private void initializeColumnMaps() {
     guessBestMappings();
 
-    for (ColumnInfo column : columns) {
-      ColumnSource src = config.getColumnSource(column.name);
+    for (int i = 0; i < columns.size(); i++) {
+      ColumnSource src = config.getColumnSource(i);
       if (src != null && src.isValid()) {
-        columnSources.put(column.name, src);
+        columnSources.set(i, src);
       }
     }
   }
@@ -300,9 +286,8 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   private void guessBestMappings() {
     List<FieldInfo> guessedFields = getGuessedFields(columns, fields);
 
-    columnSources = new TreeMap<>();
+    columnSources = new ArrayList<>(Arrays.asList(new ColumnSource[columns.size()]));
     for (int i = 0; i < columns.size(); i++) {
-      ColumnInfo column = columns.get(i);
       ColumnSource src = new ColumnSource();
 
       FieldInfo guessedField = guessedFields.get(i);
@@ -314,7 +299,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         }
       }
 
-      columnSources.put(column.name, src);
+      columnSources.set(i, src);
     }
   }
 
@@ -348,8 +333,8 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     return guessedFields;
   }
 
-  private FieldInfo getExistingMap(ColumnInfo column) {
-    ColumnSource src = columnSources.get(column.name);
+  private FieldInfo getExistingMap(int index) {
+    ColumnSource src = columnSources.get(index);
 
     if (src.fileFieldName != null) {
       for (FieldInfo field : fields) {
@@ -367,9 +352,9 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   private static class ColumnInfo implements Comparable<ColumnInfo> {
     String name;
     boolean nullable;
-    int index;
     int sqlType;
     String typeName;
+    private int index;
 
     ColumnInfo(ResultSet set) throws SQLException {
       name = set.getString(4);
@@ -398,8 +383,13 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   }
 
   private static class FieldInfo implements Comparable<FieldInfo> {
-    String name;
-    int index;
+    final String name;
+    final int index;
+
+    public FieldInfo(int index, String name) {
+      this.index = index;
+      this.name = name;
+    }
 
     @Override
     public int compareTo(FieldInfo o) {

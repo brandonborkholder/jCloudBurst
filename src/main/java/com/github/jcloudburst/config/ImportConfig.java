@@ -1,13 +1,12 @@
 package com.github.jcloudburst.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-public class ImportConfig {
+public class ImportConfig implements Cloneable {
   public static final long UNSET_VERSION = Long.MIN_VALUE;
 
   private long connectionVersion;
@@ -26,10 +25,12 @@ public class ImportConfig {
   private List<ExcelSource> excelSources;
   private List<DelimitedSource> delimitedSources;
 
-  private Map<String, ColumnSource> columns;
+  private List<String> columns;
+  private List<ColumnSource> columnSources;
 
   public ImportConfig() {
-    columns = new TreeMap<>();
+    columns = new ArrayList<>();
+    columnSources = new ArrayList<>();
     excelSources = new ArrayList<>();
     delimitedSources = new ArrayList<>();
   }
@@ -128,34 +129,59 @@ public class ImportConfig {
     return Collections.unmodifiableList(delimitedSources);
   }
 
+  public ColumnSource getColumnSource(int index) {
+    return columnSources.get(index);
+  }
+
   public ColumnSource getColumnSource(String name) {
-    return columns.get(name);
+    int idx = columns.indexOf(name);
+    if (idx < 0) {
+      return null;
+    } else {
+      return getColumnSource(idx);
+    }
+  }
+
+  public int getNumColumns() {
+    return columns.size();
+  }
+
+  public String getColumn(int index) {
+    return columns.get(index);
   }
 
   public List<String> getColumns() {
-    return Collections.unmodifiableList(new ArrayList<>(columns.keySet()));
-  }
-
-  public void setColumnSource(String name, ColumnSource source) {
-    columns.put(name, source);
-    colMappingVersion++;
-  }
-
-  public void addColumn(String name) {
-    columns.put(name, new ColumnSource());
-    colMappingVersion++;
-  }
-
-  public void removeColumn(String name) {
-    columns.remove(name);
-    colMappingVersion++;
+    return Collections.unmodifiableList(columns);
   }
 
   public void setColumns(Collection<String> names) {
     columns.clear();
-    for (String name : names) {
-      addColumn(name);
+    columnSources.clear();
+
+    columns.addAll(names);
+    columnSources.addAll(Arrays.asList(new ColumnSource[names.size()]));
+
+    colMappingVersion++;
+  }
+
+  public List<ColumnSource> getColumnSources() {
+    return Collections.unmodifiableList(columnSources);
+  }
+
+  public void setColumnSource(String name, ColumnSource source) {
+    int idx = columns.indexOf(name);
+    if (idx < 0) {
+      idx = columns.size();
+      columns.add(name);
+      columnSources.add(null);
     }
+
+    setColumnSource(idx, source);
+  }
+
+  public void setColumnSource(int index, ColumnSource source) {
+    columnSources.set(index, source);
+    colMappingVersion++;
   }
 
   public long getConnectionVersion() {
@@ -172,5 +198,19 @@ public class ImportConfig {
 
   public long getColMappingVersion() {
     return colMappingVersion;
+  }
+
+  public ImportConfig clone() {
+    try {
+      ImportConfig c = (ImportConfig) super.clone();
+      c.excelSources = new ArrayList<>(excelSources);
+      c.delimitedSources = new ArrayList<>(delimitedSources);
+      c.columns = new ArrayList<>(columns);
+      c.columnSources = new ArrayList<>(columnSources);
+
+      return c;
+    } catch (CloneNotSupportedException e) {
+      throw new AssertionError(e);
+    }
   }
 }

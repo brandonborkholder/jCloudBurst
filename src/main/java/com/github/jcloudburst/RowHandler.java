@@ -15,6 +15,9 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import com.github.jcloudburst.config.ColumnSource;
+import com.github.jcloudburst.config.ImportConfig;
+
 public class RowHandler {
   public static final String VAR_FILE = "$file";
   public static final String VAR_LINE = "$line";
@@ -27,7 +30,7 @@ public class RowHandler {
 
   protected int[] sqlTypes;
 
-  protected List<ColumnMapType> maps;
+  protected ImportConfig config;
 
   protected ImportContext context;
 
@@ -39,18 +42,20 @@ public class RowHandler {
     Numeric,
   }
 
-  public RowHandler(ConfigurationType config, ImportContext context, Connection connection) throws SQLException {
+  public RowHandler(ImportConfig config, ImportContext context, Connection connection) throws SQLException {
     this.context = context;
-    maps = config.getMapping().getColumn();
-    types = new SQLType[maps.size()];
-    sqlTypes = new int[maps.size()];
+    this.config = config;
 
-    String query = buildPreparedStatement(config);
+    int numColumns = config.getColumns().size();
+    types = new SQLType[numColumns];
+    sqlTypes = new int[numColumns];
+
+    String query = buildPreparedStatement();
     stmt = connection.prepareStatement(query);
 
     Statement typesStatement = connection.createStatement();
     typesStatement.setMaxRows(1);
-    query = "SELECT " + getDbColumnsList(config) + " FROM " + config.getTable();
+    query = "SELECT " + getDbColumnsList() + " FROM " + config.getTable();
     ResultSet set = typesStatement.executeQuery(query);
 
     ResultSetMetaData metaData = set.getMetaData();
@@ -102,31 +107,34 @@ public class RowHandler {
     }
   }
 
-  protected String getDbColumnsList(ConfigurationType config) {
+  protected String getDbColumnsList() {
     StringBuilder builder = new StringBuilder();
     boolean first = true;
 
-    for (ColumnMapType colMap : config.getMapping().getColumn()) {
+    for (String column : config.getColumns()) {
       if (first) {
         first = false;
       } else {
         builder.append(", ");
       }
-      builder.append(colMap.getDbColumn());
+
+      // XXX how to wrap the columns?
+      builder.append(column);
     }
 
     return builder.toString();
   }
 
-  protected String buildPreparedStatement(ConfigurationType config) {
+  protected String buildPreparedStatement() {
     StringBuilder builder = new StringBuilder();
     builder.append("INSERT INTO ");
     builder.append(config.getTable());
     builder.append(" ( ");
-    builder.append(getDbColumnsList(config));
+    builder.append(getDbColumnsList());
     builder.append(" ) VALUES ( ");
 
-    for (int i = 0; i < maps.size(); i++) {
+    int numColumns = config.getColumns().size();
+    for (int i = 0; i < numColumns; i++) {
       if (i == 0) {
         builder.append("?");
       } else {
@@ -156,7 +164,7 @@ public class RowHandler {
       value = value.trim();
       SQLType type = types[dbColumnIndex];
       if (type == SQLType.Date) {
-        DateFormat format = new SimpleDateFormat(maps.get(dbColumnIndex).getFormat());
+        DateFormat format = new SimpleDateFormat(config.getColumnSources().get(dbColumnIndex).dateFormatString);
         Date date = format.parse(value);
         stmt.setDate(dbColumnIndex + 1, new java.sql.Date(date.getTime()));
       } else if (type == SQLType.Numeric) {
@@ -184,32 +192,31 @@ public class RowHandler {
     }
   }
 
-  protected void fillVariableValues() throws SQLException {
-    int colId = 0;
-    for (ColumnMapType map : maps) {
-      if (map.getVariable() != null) {
-        if (map.getVariable().equalsIgnoreCase(VAR_FILE)) {
-          setDbValue(colId, context.getFile());
-        } else if (map.getVariable().equalsIgnoreCase(VAR_LINE)) {
-          setDbValue(colId, String.valueOf(context.getSourceRowCount()));
-        }
-      }
-      colId++;
-    }
-  }
-
   protected void fillFixedValues() throws SQLException {
-    int colId = 0;
-    for (ColumnMapType map : maps) {
-      if (map.getFixedValue() != null) {
-        setDbValue(colId, map.getFixedValue());
+    for (int col = 0; col < config.getNumColumns(); col++) {
+      ColumnSource src = config.getColumnSource(col);
+
+      if (src.fixedValue == null) {
+        continue;
       }
-      colId++;
+
+      switch (src.fixedValue) {
+      case VAR_FILE:
+        setDbValue(col, context.getFile().getAbsolutePath());
+        break;
+
+      case VAR_LINE:
+        setDbValue(col, String.valueOf(context.getSourceRowCount()));
+        break;
+
+      default:
+        setDbValue(col, src.fixedValue);
+        break;
+      }
     }
   }
 
   public void nextRow() throws SQLException {
-    fillVariableValues();
     fillFixedValues();
     stmt.addBatch();
   }

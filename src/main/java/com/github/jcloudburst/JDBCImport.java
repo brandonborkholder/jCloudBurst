@@ -1,43 +1,39 @@
 package com.github.jcloudburst;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Scanner;
 
-import javax.xml.bind.JAXB;
+import com.github.jcloudburst.config.DelimitedSource;
+import com.github.jcloudburst.config.ExcelSource;
+import com.github.jcloudburst.config.ImportConfig;
 
 public class JDBCImport {
-  private ConfigurationType config;
+  private ImportConfig config;
 
-  public JDBCImport(ConfigurationType configuration) throws IllegalArgumentException {
+  public JDBCImport(ImportConfig configuration) throws IllegalArgumentException {
     config = configuration;
   }
 
   public void execute(ImportListener listener) throws SQLException, IOException {
-    Connection connection = DriverManager.getConnection(config.getJdbc().getUrl(),
-        config.getJdbc().getUsername(), config.getJdbc().getPassword());
-
     ImportContext context = new ImportContext();
-    try {
-      if (config.getExcel() != null) {
-        for (ExcelSource source : config.getExcel()) {
-          ExcelFileSource sourceReader = new ExcelFileSource(source);
-          context.newExcelSource(source.getFile(), source.getExcelSheet());
 
-          importData(sourceReader, connection, listener, context);
-        }
+    try (Connection c = DriverManager.getConnection(config.getJdbcUrl(), config.getJdbcUsername(), config.getJdbcPassword())) {
+      for (ExcelSource source : config.getExcelSources()) {
+        listener.setCurrentSource(String.format("sheet %s in %s", source.excelSheet, source.file.getName()));
+        ExcelFileSource sourceReader = new ExcelFileSource(source);
+        context.newExcelSource(source.file, source.excelSheet);
+
+        importData(sourceReader, c, listener, context);
       }
 
-      if (config.getCsv() != null) {
-        for (DelimitedSource source : config.getCsv()) {
-          DelimitedFileReader sourceReader = new DelimitedFileReader(source);
-          context.newDelimitedSource(source.getFile());
+      for (DelimitedSource source : config.getDelimitedSources()) {
+        listener.setCurrentSource(source.file.getName());
+        DelimitedFileReader sourceReader = new DelimitedFileReader(source);
+        context.newDelimitedSource(source.file);
 
-          importData(sourceReader, connection, listener, context);
-        }
+        importData(sourceReader, c, listener, context);
       }
     } catch (SQLException e) {
       String err = null;
@@ -48,21 +44,21 @@ public class JDBCImport {
             context.getFile());
       }
 
-      throw new SQLException(err);
+      throw new SQLException(err, e);
     }
   }
 
-  protected void importData(SourceReader sourceReader, Connection connection, ImportListener listener, ImportContext context)
+  protected void importData(SourceReader sourceReader, Connection c, ImportListener listener, ImportContext context)
       throws IOException, SQLException {
-    ColumnMapper mapper = new ColumnMapper(config.getMapping().getColumn());
+    ColumnMapper mapper = new ColumnMapper(config);
     SourceFileHandler sourceHandler = new SourceFileHandler(sourceReader, config, mapper);
-    RowHandler rowHandler = new RowHandler(config, context, connection);
+    RowHandler rowHandler = new RowHandler(config, context, c);
 
     while (sourceHandler.hasNextRow()) {
       sourceHandler.fillRow(rowHandler);
       rowHandler.nextRow();
       context.incrementRows();
-      listener.rowsProcessed(context.getTotalRowCount());
+      listener.totalRowsProcessed(context.getTotalRowCount());
 
       if (context.getTotalRowCount() % 1000 == 0) {
         rowHandler.commitBatch();
@@ -71,40 +67,5 @@ public class JDBCImport {
 
     rowHandler.commitBatch();
     rowHandler.close();
-  }
-
-  public static void main(String[] args) throws Exception {
-    String configFilePath = "./src/test/resources/testrun.xml";
-    if (args.length > 1) {
-      configFilePath = args[0];
-    }
-
-    File configFile = new File(configFilePath);
-    if (!configFile.isFile()) {
-      System.err.println("Config file does not exist: " + configFilePath);
-      System.exit(1);
-    }
-
-    ConfigurationType config = JAXB.unmarshal(configFile, ConfigurationType.class);
-    if (Boolean.TRUE.equals(config.getJdbc().isPasswordPrompt())) {
-      System.out.println("Enter password for " + config.getJdbc().getUsername() + ": ");
-      Scanner scanner = new Scanner(System.in);
-      String password = scanner.next();
-      scanner.close();
-
-      config.getJdbc().setPassword(password);
-    }
-
-    JDBCImport importer = new JDBCImport(config);
-    importer.execute(new ImportListener() {
-      @Override
-      public void totalRowsToBeProcessed(int count) {
-      }
-
-      @Override
-      public void rowsProcessed(int count) {
-        System.out.println(count);
-      }
-    });
   }
 }

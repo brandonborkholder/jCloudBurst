@@ -16,7 +16,7 @@ public class TestGUI {
   public static void main(String[] args) throws Exception {
     String jdbc = "jdbc:h2:mem:test";
     Connection c = DriverManager.getConnection(jdbc);
-    c.createStatement().executeUpdate("create table test (a varchar(100), b double)");
+    c.createStatement().executeUpdate("create table test (a_column varchar(100), b_column double)");
 
     ImportConfig config = new ImportConfig();
     config.setJdbcUrl(jdbc);
@@ -30,8 +30,8 @@ public class TestGUI {
         .withSeparator(",");
     config.add(src);
 
-    config.setColumnSource("a", new ColumnSource().withFileFieldName("char"));
-    config.setColumnSource("b", new ColumnSource().withFileFieldIndex(1));
+    config.setColumnSource("a_column", new ColumnSource().withFileFieldName("A column"));
+    config.setColumnSource("b_column", new ColumnSource().withFileFieldIndex(1));
 
     MainWindow window = new MainWindow(config);
     window.setPreferredSize(new Dimension(1024, 768));

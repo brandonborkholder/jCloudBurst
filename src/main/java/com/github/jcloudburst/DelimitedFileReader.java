@@ -8,6 +8,8 @@ import java.util.List;
 
 import au.com.bytecode.opencsv.CSVReader;
 
+import com.github.jcloudburst.config.DelimitedSource;
+
 public class DelimitedFileReader implements SourceReader {
   private List<String> names;
 
@@ -18,15 +20,15 @@ public class DelimitedFileReader implements SourceReader {
   private String[] rowData;
 
   public DelimitedFileReader(DelimitedSource source) throws IOException {
-    if (source.getSeparatorChar() == null || source.getSeparatorChar().isEmpty()) {
+    if (source.separator == null || source.separator.isEmpty()) {
       separator = ',';
     } else {
-      separator = source.getSeparatorChar().charAt(0);
+      separator = source.separator.charAt(0);
     }
 
-    reader = new CSVReader(new FileReader(source.getFile()), separator);
+    reader = new CSVReader(new FileReader(source.file), separator);
 
-    if (source.isHasHeaderRow() != null && source.isHasHeaderRow()) {
+    if (source.hasHeaderRow) {
       String[] row = reader.readNext();
       names = Collections.unmodifiableList(Arrays.asList(row));
     } else {

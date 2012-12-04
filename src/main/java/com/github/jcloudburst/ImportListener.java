@@ -1,7 +1,9 @@
 package com.github.jcloudburst;
 
 public interface ImportListener {
-  void totalRowsToBeProcessed(int count);
+  void setCurrentSource(String source);
+
+  void setPercentThroughSource(double percent);
   
-  void rowsProcessed(int count);
+  void totalRowsProcessed(long count);
 }

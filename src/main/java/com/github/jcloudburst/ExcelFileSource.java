@@ -12,6 +12,8 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import com.github.jcloudburst.config.ExcelSource;
+
 public class ExcelFileSource implements SourceReader {
   protected Sheet activeSheet;
 
@@ -22,22 +24,24 @@ public class ExcelFileSource implements SourceReader {
   private Row current;
 
   public ExcelFileSource(ExcelSource source) throws IOException {
-    File workbookFile = new File(source.getFile());
-    String worksheet = source.getExcelSheet();
+    File workbookFile = source.file;
+    String worksheet = source.excelSheet;
 
     XSSFWorkbook workbook = new XSSFWorkbook(workbookFile.getAbsolutePath());
     activeSheet = workbook.getSheet(worksheet);
     rowIterator = activeSheet.iterator();
 
     header = null;
-    if (source.isHasHeaderRow()) {
+    if (source.hasHeaderRow) {
       header = Collections.unmodifiableList(readHeader());
     }
   }
 
   @Override
   public void close() throws IOException {
-    // nop
+    activeSheet = null;
+    rowIterator = null;
+    current = null;
   }
 
   @Override

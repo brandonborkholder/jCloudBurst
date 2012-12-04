@@ -4,20 +4,24 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.github.jcloudburst.config.ImportConfig;
+
 public class SourceFileHandler {
   protected ColumnMapper mapper;
   protected SourceReader reader;
 
   protected boolean hasNext;
 
-  public SourceFileHandler(SourceReader reader, ConfigurationType config, ColumnMapper mapper) throws IOException {
+  public SourceFileHandler(SourceReader reader, ImportConfig config, ColumnMapper mapper) throws IOException {
     this.mapper = mapper;
     this.reader = reader;
+    
+    hasNext = true;
 
     initializeMapper(config);
   }
 
-  protected void initializeMapper(ConfigurationType config) throws IOException {
+  protected void initializeMapper(ImportConfig config) throws IOException {
     List<String> header = reader.getHeader();
 
     for (int colId = 0; colId < mapper.numColumns(); colId++) {
@@ -32,7 +36,7 @@ public class SourceFileHandler {
         for (int i = 0; i < header.size(); i++) {
           String value = header.get(i);
           if (value != null) {
-            if (fileColName.equalsIgnoreCase(value)) {
+            if (value.equalsIgnoreCase(fileColName)) {
               fileColIndex = i;
               break;
             }
@@ -43,7 +47,7 @@ public class SourceFileHandler {
           throw new IllegalArgumentException("No file column index specified for column " + colId +
               " and no corresponding column named '" + fileColName + "'");
         } else {
-          mapper.setFileColumnIndex(colId, fileColIndex);
+          mapper.mapColToField(colId, fileColIndex);
         }
       }
     }
@@ -68,7 +72,7 @@ public class SourceFileHandler {
     int totalColumns = mapper.numColumns();
 
     for (int colId = 0; colId < totalColumns; colId++) {
-      int fileColIndex = mapper.getFileColumnIndex(colId);
+      int fileColIndex = mapper.mapColToField(colId);
       if (fileColIndex >= 0) {
         String value = reader.getValue(fileColIndex);
 

@@ -1,12 +1,14 @@
 package com.github.jcloudburst;
 
+import java.io.File;
+
 public class ImportContext {
-  private String file;
+  private File file;
   private String worksheet;
   private int sourceRowCount;
   private int totalRowCount;
 
-  public String getFile() {
+  public File getFile() {
     return file;
   }
 
@@ -22,13 +24,13 @@ public class ImportContext {
     return totalRowCount;
   }
 
-  public void newExcelSource(String fileName, String worksheet) {
+  public void newExcelSource(File fileName, String worksheet) {
     file = fileName;
     this.worksheet = worksheet;
     sourceRowCount = 0;
   }
 
-  public void newDelimitedSource(String fileName) {
+  public void newDelimitedSource(File fileName) {
     file = fileName;
     worksheet = null;
     sourceRowCount = 0;
