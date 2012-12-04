@@ -21,6 +21,7 @@ import com.github.jcloudburst.config.ImportConfig;
 public class MainWindow extends JFrame {
   protected CardLayout switcherLayout;
   protected JPanel switcherPanel;
+  protected LiteStatusBar statusBar;
 
   protected ImportConfig config;
 
@@ -36,12 +37,16 @@ public class MainWindow extends JFrame {
     switcherLayout = new CardLayout();
     switcherPanel = new JPanel(switcherLayout);
 
+    statusBar = new LiteStatusBar();
+
     steps = new ArrayList<ConfigStepPanel>();
     steps.add(new DatabaseConnectionPanel());
     steps.add(new TableChooserPanel());
     steps.add(new FileSourceChooser());
     steps.add(new ColumnMapperPanel());
     steps.add(new ProgressPanel());
+
+    attachStatusBarListener();
 
     int index = 0;
     for (ConfigStepPanel panel : steps) {
@@ -69,16 +74,30 @@ public class MainWindow extends JFrame {
     currentStep = 0;
     updateUIForCurrentStep();
 
-    setLayout(new MigLayout("", "[grow|grow]", "[grow|]"));
+    setLayout(new MigLayout("", "[grow|grow]", "[grow||20px]"));
     add(switcherPanel, "span,grow,wrap");
     add(backButton, "left");
-    add(nextButton, "right");
+    add(nextButton, "right,wrap");
+    add(statusBar, "span,grow");
 
     try {
       steps.get(currentStep).loadConfiguration(config);
     } catch (Exception e) {
       e.printStackTrace();
       JOptionPane.showMessageDialog(this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
+    }
+  }
+
+  protected void attachStatusBarListener() {
+    TaskStatusTextListener listener = new TaskStatusTextListener() {
+      @Override
+      public void statusChanged(Object src, String text) {
+        statusBar.setStatusText(text);
+      }
+    };
+
+    for (ConfigStepPanel step : steps) {
+      step.addTaskStatusListener(listener);
     }
   }
 

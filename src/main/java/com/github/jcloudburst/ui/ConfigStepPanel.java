@@ -3,9 +3,10 @@ package com.github.jcloudburst.ui;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.JPanel;
 
@@ -15,8 +16,11 @@ import com.github.jcloudburst.config.ImportConfig;
 public abstract class ConfigStepPanel extends JPanel {
   protected ImportConfig config;
 
+  private List<TaskStatusTextListener> statusListeners;
+
   public ConfigStepPanel(String name) {
     setName(name);
+    statusListeners = new CopyOnWriteArrayList<>();
   }
 
   public void loadConfiguration(ImportConfig config) throws IllegalStateException {
@@ -32,9 +36,15 @@ public abstract class ConfigStepPanel extends JPanel {
   protected abstract void flushUIToConfiguration() throws IllegalStateException;
 
   protected abstract void flushConfigurationToUI() throws IllegalStateException;
-  
+
+  public void addTaskStatusListener(TaskStatusTextListener l) {
+    statusListeners.add(l);
+  }
+
   protected void setBackgroundTaskStatus(String status) {
-    System.out.println(new Date() + ": " + status);
+    for (TaskStatusTextListener l : statusListeners) {
+      l.statusChanged(this, status);
+    }
   }
 
   protected void verifyNotEmpty(String name, Object value) throws IllegalStateException {

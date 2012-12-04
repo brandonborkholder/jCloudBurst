@@ -98,10 +98,14 @@ public class ProgressPanel extends ConfigStepPanel {
       protected void done() {
         setBackgroundTaskStatus(null);
         updateStatusLabels();
+
         try {
           get();
+
+          appendToHistoryLog("import complete");
         } catch (Exception e) {
           e.printStackTrace();
+          appendToHistoryLog("import failed, see logs");
         }
       }
     }.execute();
@@ -115,14 +119,19 @@ public class ProgressPanel extends ConfigStepPanel {
     timeRunningLabel.setText(null);
   }
 
+  private void appendToHistoryLog(String text) {
+    historyArea.append(new SimpleDateFormat("EEE HH:mm:ss").format(new Date()));
+    historyArea.append(" ");
+    historyArea.append(text);
+    historyArea.append("\n");
+  }
+
   private void updateStatusLabels() {
     totalRowsProcessedLabel.setText(String.format("%,d", numberOfRowsProcessed));
     percentProcessedBar.setValue((int) (percentThruSource * 1000));
 
     if (currentSourceLabel.getText() == null || !currentSourceLabel.getText().equals(currentSourceString)) {
-      historyArea.append(new SimpleDateFormat("EEE HH:mm:ss").format(new Date()));
-      historyArea.append(" ");
-      historyArea.append(currentSourceString);
+      appendToHistoryLog("started " + currentSourceString);
     }
 
     currentSourceLabel.setText(currentSourceString);
@@ -164,7 +173,7 @@ public class ProgressPanel extends ConfigStepPanel {
   private void doImport() {
     startTime = System.currentTimeMillis();
 
-    Timer updateTimer = new Timer(1000, new ActionListener() {
+    Timer updateTimer = new Timer(100, new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
         updateStatusLabels();
