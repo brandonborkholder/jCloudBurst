@@ -6,9 +6,12 @@ import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -37,6 +40,7 @@ public class MainWindow extends JFrame {
   protected JButton backButton;
 
   public MainWindow(ImportConfig config) {
+    setTitle("CloudBurst");
     this.config = config;
 
     switcherLayout = new CardLayout();
@@ -60,13 +64,7 @@ public class MainWindow extends JFrame {
       index++;
     }
 
-    nextButton = new JButton("Next >>");
-    nextButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        next();
-      }
-    });
+    nextButton = new JButton();
 
     backButton = new JButton("<< Back");
     backButton.addActionListener(new ActionListener() {
@@ -132,11 +130,35 @@ public class MainWindow extends JFrame {
   protected void updateUIForCurrentStep() {
     switcherLayout.show(switcherPanel, String.valueOf(currentStep));
 
+    ConfigStepPanel active = steps.get(currentStep);
+    Action nextAction = active.getCustomNextAction();
+    if (nextAction == null) {
+      nextAction = new NextAction();
+    }
+
+    nextButton.setAction(nextAction);
     backButton.setVisible(currentStep > 0);
-    nextButton.setVisible(currentStep < steps.size() - 1);
+  }
+
+  private class NextAction extends AbstractAction {
+    NextAction() {
+      super("Next >>");
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      next();
+    }
   }
 
   public static void main(String[] args) throws Exception {
+    Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+      @Override
+      public void uncaughtException(Thread t, Throwable e) {
+        LOGGER.error("Uncaught exception on thread " + t, e);
+      }
+    });
+
     UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
     MainWindow window = new MainWindow(new ImportConfig());

@@ -7,6 +7,8 @@ public interface SourceReader extends AutoCloseable {
   boolean next() throws IOException;
 
   List<String> getHeader() throws IOException;
+  
+  double getPercentRead();
 
   String getValue(int column) throws IOException;
 

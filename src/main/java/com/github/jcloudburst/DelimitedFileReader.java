@@ -1,7 +1,9 @@
 package com.github.jcloudburst;
 
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -15,6 +17,8 @@ public class DelimitedFileReader implements SourceReader {
 
   private char separator;
 
+  private long fileBytes;
+  private CountingStream counter;
   private CSVReader reader;
 
   private String[] rowData;
@@ -26,7 +30,9 @@ public class DelimitedFileReader implements SourceReader {
       separator = source.separator.charAt(0);
     }
 
-    reader = new CSVReader(new FileReader(source.file), separator);
+    fileBytes = source.file.length();
+    counter = new CountingStream(new FileInputStream(source.file));
+    reader = new CSVReader(new InputStreamReader(counter), separator);
 
     if (source.hasHeaderRow) {
       String[] row = reader.readNext();
@@ -34,6 +40,11 @@ public class DelimitedFileReader implements SourceReader {
     } else {
       names = null;
     }
+  }
+
+  @Override
+  public double getPercentRead() {
+    return counter.count / (double) fileBytes;
   }
 
   @Override
@@ -59,5 +70,66 @@ public class DelimitedFileReader implements SourceReader {
   @Override
   public void close() throws IOException {
     reader.close();
+  }
+
+  private static class CountingStream extends InputStream {
+    long count;
+
+    InputStream delegate;
+
+    CountingStream(InputStream stream) {
+      delegate = stream;
+    }
+
+    @Override
+    public int read() throws IOException {
+      int i = delegate.read();
+      if (0 <= i) {
+        inc(1);
+      }
+
+      return i;
+    }
+
+    @Override
+    public int read(byte[] buf, int off, int len) throws IOException {
+      return inc(delegate.read(buf, off, len));
+    }
+
+    @Override
+    public long skip(long n) throws IOException {
+      return incLong(delegate.skip(n));
+    }
+
+    @Override
+    public void reset() throws IOException {
+      delegate.reset();
+    }
+
+    @Override
+    public boolean markSupported() {
+      return delegate.markSupported();
+    }
+
+    int inc(int i) {
+      if (0 < i) {
+        count += i;
+      }
+
+      return i;
+    }
+
+    long incLong(long l) {
+      if (0 < l) {
+        count += l;
+      }
+
+      return l;
+    }
+
+    @Override
+    public void close() throws IOException {
+      delegate.close();
+    }
   }
 }

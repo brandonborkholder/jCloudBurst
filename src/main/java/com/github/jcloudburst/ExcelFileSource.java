@@ -22,6 +22,7 @@ public class ExcelFileSource implements SourceReader {
   private List<String> header;
 
   private Row current;
+  private int lastRowNum;
 
   public ExcelFileSource(ExcelSource source) throws IOException {
     File workbookFile = source.file;
@@ -31,10 +32,17 @@ public class ExcelFileSource implements SourceReader {
     activeSheet = workbook.getSheet(worksheet);
     rowIterator = activeSheet.iterator();
 
+    lastRowNum = activeSheet.getLastRowNum();
+
     header = null;
     if (source.hasHeaderRow) {
       header = Collections.unmodifiableList(readHeader());
     }
+  }
+
+  @Override
+  public double getPercentRead() {
+    return current.getRowNum() / (double) lastRowNum;
   }
 
   @Override

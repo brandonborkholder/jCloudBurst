@@ -36,7 +36,7 @@ public class ImportContext {
     sourceRowCount = 0;
   }
 
-  public void incrementRows() {
+  public void incrementRowCounts() {
     sourceRowCount++;
     totalRowCount++;
   }

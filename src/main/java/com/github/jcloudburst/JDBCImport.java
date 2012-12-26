@@ -45,7 +45,7 @@ public class JDBCImport {
 
         importData(sourceReader, c, listener, context);
       }
-      
+
       LOGGER.info("Import completed with " + context.getTotalRowCount() + " rows imported");
     } catch (SQLException e) {
       String err = null;
@@ -70,8 +70,9 @@ public class JDBCImport {
     while (sourceHandler.hasNextRow()) {
       sourceHandler.fillRow(rowHandler);
       rowHandler.nextRow();
-      context.incrementRows();
+      context.incrementRowCounts();
       listener.totalRowsProcessed(context.getTotalRowCount());
+      listener.setPercentThroughSource(sourceReader.getPercentRead());
 
       if (context.getTotalRowCount() % 1000 == 0) {
         LOGGER.debug("Committing latest batch with " + context.getTotalRowCount() + " total rows");

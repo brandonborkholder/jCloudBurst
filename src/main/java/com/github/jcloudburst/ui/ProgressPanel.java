@@ -9,13 +9,12 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import javax.swing.JButton;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
 import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 
@@ -26,8 +25,6 @@ import com.github.jcloudburst.JDBCImport;
 
 @SuppressWarnings("serial")
 public class ProgressPanel extends ConfigStepPanel {
-  private JButton runButton;
-
   private JLabel totalRowsProcessedLabel;
   private JLabel currentSourceLabel;
   private JProgressBar percentProcessedBar;
@@ -44,14 +41,6 @@ public class ProgressPanel extends ConfigStepPanel {
   public ProgressPanel() {
     super("Import");
 
-    runButton = new JButton("Import");
-    runButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        runImportTask();
-      }
-    });
-
     totalRowsProcessedLabel = new JLabel();
     percentProcessedBar = new JProgressBar();
     percentProcessedBar.setMinimum(0);
@@ -61,7 +50,7 @@ public class ProgressPanel extends ConfigStepPanel {
     historyArea = new JTextArea();
     historyArea.setEditable(false);
 
-    setLayout(new MigLayout("", "[|grow]", "[||||grow||]"));
+    setLayout(new MigLayout("", "[|grow]", "[||||grow]"));
     add(new JLabel("Running Time: "), "right");
     add(timeRunningLabel, "wrap");
     add(new JLabel("Total Rows Imported: "), "right");
@@ -71,9 +60,17 @@ public class ProgressPanel extends ConfigStepPanel {
     add(new JLabel("Source Completion: "), "right");
     add(percentProcessedBar, "grow,wrap");
     add(new JLabel("Log: "), "right,top");
-    add(new JScrollPane(historyArea), "grow,wrap");
-    add(new JSeparator(SwingConstants.HORIZONTAL), "span,grow,wrap");
-    add(runButton, "span,right");
+    add(new JScrollPane(historyArea), "grow");
+  }
+
+  @Override
+  protected Action getCustomNextAction() {
+    return new AbstractAction("Import") {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        runImportTask();
+      }
+    };
   }
 
   @Override
@@ -117,6 +114,7 @@ public class ProgressPanel extends ConfigStepPanel {
     historyArea.setText(null);
     totalRowsProcessedLabel.setText(null);
     percentProcessedBar.setValue(0);
+    percentProcessedBar.setIndeterminate(false);
     currentSourceLabel.setText(null);
     timeRunningLabel.setText(null);
   }
@@ -130,7 +128,13 @@ public class ProgressPanel extends ConfigStepPanel {
 
   private void updateStatusLabels() {
     totalRowsProcessedLabel.setText(String.format("%,d", numberOfRowsProcessed));
-    percentProcessedBar.setValue((int) (percentThruSource * 1000));
+
+    if (percentThruSource < 0) {
+      percentProcessedBar.setIndeterminate(true);
+    } else {
+      percentProcessedBar.setIndeterminate(false);
+      percentProcessedBar.setValue((int) (percentThruSource * 1000));
+    }
 
     if (currentSourceLabel.getText() == null || !currentSourceLabel.getText().equals(currentSourceString)) {
       appendToHistoryLog("started " + currentSourceString);

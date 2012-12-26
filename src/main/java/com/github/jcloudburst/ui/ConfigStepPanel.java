@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.swing.Action;
 import javax.swing.JPanel;
 
 import com.github.jcloudburst.config.ImportConfig;
@@ -36,6 +37,10 @@ public abstract class ConfigStepPanel extends JPanel {
   protected abstract void flushUIToConfiguration() throws IllegalStateException;
 
   protected abstract void flushConfigurationToUI() throws IllegalStateException;
+
+  protected Action getCustomNextAction() {
+    return null;
+  }
 
   public void addTaskStatusListener(TaskStatusTextListener l) {
     statusListeners.add(l);
