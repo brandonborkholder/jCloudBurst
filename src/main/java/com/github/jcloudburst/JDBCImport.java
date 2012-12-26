@@ -1,15 +1,21 @@
 package com.github.jcloudburst;
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
+import org.apache.log4j.Logger;
 
 import com.github.jcloudburst.config.DelimitedSource;
 import com.github.jcloudburst.config.ExcelSource;
 import com.github.jcloudburst.config.ImportConfig;
 
 public class JDBCImport {
+  private static final Logger LOGGER = Logger.getLogger(JDBCImport.class);
+
   private ImportConfig config;
 
   public JDBCImport(ImportConfig configuration) throws IllegalArgumentException {
@@ -21,7 +27,10 @@ public class JDBCImport {
 
     try (Connection c = DriverManager.getConnection(config.getJdbcUrl(), config.getJdbcUsername(), config.getJdbcPassword())) {
       for (ExcelSource source : config.getExcelSources()) {
-        listener.setCurrentSource(String.format("sheet %s in %s", source.excelSheet, source.file.getName()));
+        String srcString = format("sheet %s in %s", source.excelSheet, source.file.getName());
+        LOGGER.info("Starting " + source);
+        listener.setCurrentSource(srcString);
+
         ExcelFileSource sourceReader = new ExcelFileSource(source);
         context.newExcelSource(source.file, source.excelSheet);
 
@@ -29,12 +38,15 @@ public class JDBCImport {
       }
 
       for (DelimitedSource source : config.getDelimitedSources()) {
+        LOGGER.info("Starting " + source);
         listener.setCurrentSource(source.file.getName());
         DelimitedFileReader sourceReader = new DelimitedFileReader(source);
         context.newDelimitedSource(source.file);
 
         importData(sourceReader, c, listener, context);
       }
+      
+      LOGGER.info("Import completed with " + context.getTotalRowCount() + " rows imported");
     } catch (SQLException e) {
       String err = null;
       if (context.getWorksheet() == null) {
@@ -44,6 +56,7 @@ public class JDBCImport {
             context.getFile());
       }
 
+      LOGGER.error(err, e);
       throw new SQLException(err, e);
     }
   }
@@ -61,10 +74,12 @@ public class JDBCImport {
       listener.totalRowsProcessed(context.getTotalRowCount());
 
       if (context.getTotalRowCount() % 1000 == 0) {
+        LOGGER.debug("Committing latest batch with " + context.getTotalRowCount() + " total rows");
         rowHandler.commitBatch();
       }
     }
 
+    LOGGER.debug("Committing final batch with " + context.getTotalRowCount() + " total rows");
     rowHandler.commitBatch();
     rowHandler.close();
   }

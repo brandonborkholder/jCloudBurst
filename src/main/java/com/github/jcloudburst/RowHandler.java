@@ -15,10 +15,14 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.github.jcloudburst.config.ColumnSource;
 import com.github.jcloudburst.config.ImportConfig;
 
 public class RowHandler {
+  private static final Logger LOGGER = Logger.getLogger(RowHandler.class);
+
   public static final String VAR_FILE = "$file";
   public static final String VAR_LINE = "$line";
 
@@ -51,6 +55,7 @@ public class RowHandler {
     sqlTypes = new int[numColumns];
 
     String query = buildPreparedStatement();
+    LOGGER.debug(query);
     stmt = connection.prepareStatement(query);
 
     Statement typesStatement = connection.createStatement();
@@ -164,7 +169,7 @@ public class RowHandler {
       value = value.trim();
       SQLType type = types[dbColumnIndex];
       if (type == SQLType.Date) {
-        DateFormat format = new SimpleDateFormat(config.getColumnSources().get(dbColumnIndex).dateFormatString);
+        DateFormat format = new SimpleDateFormat(config.getColumnSource(dbColumnIndex).dateFormatString);
         Date date = format.parse(value);
         stmt.setDate(dbColumnIndex + 1, new java.sql.Date(date.getTime()));
       } else if (type == SQLType.Numeric) {
@@ -173,8 +178,7 @@ public class RowHandler {
         stmt.setString(dbColumnIndex + 1, value);
       }
     } catch (ParseException e) {
-      // swallow for now
-      setDbValue(dbColumnIndex, (String) null);
+      throw new SQLException("Could not parse date format: " + config.getColumnSource(dbColumnIndex).dateFormatString, e);
     }
   }
 
@@ -188,7 +192,7 @@ public class RowHandler {
     if (type == SQLType.Date) {
       stmt.setDate(dbColumnIndex + 1, new java.sql.Date(value.getTime()));
     } else {
-      throw new IllegalArgumentException("Cannot accept date value");
+      throw new IllegalArgumentException("Cannot accept date value for " + config.getColumn(dbColumnIndex));
     }
   }
 

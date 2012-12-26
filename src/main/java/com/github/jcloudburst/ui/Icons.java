@@ -15,7 +15,7 @@ public class Icons {
     try (InputStream in = Icons.class.getClassLoader().getResourceAsStream("icons/delete.png")) {
       ico = new ImageIcon(ImageIO.read(in));
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException("cannot read icon", e);
     }
 
     deleteIcon = ico;

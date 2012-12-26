@@ -34,6 +34,11 @@ public class DelimitedSource implements Cloneable {
   }
 
   @Override
+  public String toString() {
+    return String.format("Delimited[file=%s,separator=%s,hasHeader=%b]", file, separator, hasHeaderRow);
+  }
+
+  @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;

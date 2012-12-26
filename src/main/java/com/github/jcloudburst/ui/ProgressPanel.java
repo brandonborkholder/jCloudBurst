@@ -1,5 +1,7 @@
 package com.github.jcloudburst.ui;
 
+import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -85,12 +87,12 @@ public class ProgressPanel extends ConfigStepPanel {
   }
 
   private void runImportTask() {
-    setBackgroundTaskStatus("Importing ...");
     clearStatusLabels();
 
     new SwingWorker<Void, Void>() {
       @Override
       protected Void doInBackground() throws Exception {
+        setBackgroundTaskStatus("importing ...");
         doImport();
         return null;
       }
@@ -104,7 +106,7 @@ public class ProgressPanel extends ConfigStepPanel {
 
           appendToHistoryLog("import complete");
         } catch (Exception e) {
-          e.printStackTrace();
+          logAndShow(ProgressPanel.this, e);
           appendToHistoryLog("import failed, see logs");
         }
       }
@@ -170,7 +172,7 @@ public class ProgressPanel extends ConfigStepPanel {
     timeRunningLabel.setText(text.toString());
   }
 
-  private void doImport() {
+  private void doImport() throws IOException, SQLException {
     startTime = System.currentTimeMillis();
 
     Timer updateTimer = new Timer(100, new ActionListener() {
@@ -200,8 +202,6 @@ public class ProgressPanel extends ConfigStepPanel {
           numberOfRowsProcessed = count;
         }
       });
-    } catch (IOException | SQLException e) {
-      e.printStackTrace();
     } finally {
       updateTimer.stop();
     }

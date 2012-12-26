@@ -10,10 +10,13 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JTable;
 
+import org.apache.log4j.Logger;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @SuppressWarnings("serial")
 public class ExcelSheetEditor extends DefaultCellEditor {
+  private static final Logger LOGGER = Logger.getLogger(ExcelSheetEditor.class);
+
   private JComboBox<String> sheetChooser;
 
   @SuppressWarnings("unchecked")
@@ -33,7 +36,7 @@ public class ExcelSheetEditor extends DefaultCellEditor {
       try {
         model = createModel((File) file);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOGGER.error("Could not read Excel file: " + file);
       }
     }
 

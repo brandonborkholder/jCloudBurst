@@ -1,5 +1,7 @@
 package com.github.jcloudburst.ui;
 
+import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
+
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -122,7 +124,7 @@ public class TableChooserPanel extends ConfigStepPanel {
             tableList.setSelectedValue(tableToSetOnDone, true);
           }
         } catch (Exception e) {
-          e.printStackTrace();
+          logAndShow(TableChooserPanel.this, e);
         }
       }
     }.execute();
@@ -168,7 +170,7 @@ public class TableChooserPanel extends ConfigStepPanel {
             tableToColumnsMap.put(selected, get());
             selectedTableChanged();
           } catch (Exception e) {
-            // what now?
+            logAndShow(TableChooserPanel.this, e);
           }
         }
       }.execute();

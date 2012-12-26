@@ -1,5 +1,7 @@
 package com.github.jcloudburst.ui;
 
+import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
@@ -71,16 +73,19 @@ public class ColumnMapperPanel extends ConfigStepPanel {
       new SwingWorker<List<ColumnInfo>, Void>() {
         @Override
         protected List<ColumnInfo> doInBackground() throws Exception {
+          setBackgroundTaskStatus("fetching table columns from database ...");
           return getColumns();
         }
 
         @Override
         protected void done() {
+          setBackgroundTaskStatus(null);
+
           try {
             columns = get();
             ensureHasFields();
           } catch (Exception e) {
-            e.printStackTrace();
+            logAndShow(ColumnMapperPanel.this, e);
           }
         }
       }.execute();
@@ -112,16 +117,19 @@ public class ColumnMapperPanel extends ConfigStepPanel {
       new SwingWorker<List<FieldInfo>, Void>() {
         @Override
         protected List<FieldInfo> doInBackground() throws Exception {
+          setBackgroundTaskStatus("fetching fields from the files ...");
           return getFields();
         }
 
         @Override
         protected void done() {
+          setBackgroundTaskStatus(null);
+
           try {
             fields = get();
             setupUI();
           } catch (Exception e) {
-            e.printStackTrace();
+            logAndShow(ColumnMapperPanel.this, e);
           }
         }
       }.execute();

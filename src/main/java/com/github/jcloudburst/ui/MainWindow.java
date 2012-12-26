@@ -1,5 +1,7 @@
 package com.github.jcloudburst.ui;
 
+import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
+
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -9,16 +11,19 @@ import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 
 import net.miginfocom.swing.MigLayout;
 
+import org.apache.log4j.Logger;
+
 import com.github.jcloudburst.config.ImportConfig;
 
 @SuppressWarnings("serial")
 public class MainWindow extends JFrame {
+  private static final Logger LOGGER = Logger.getLogger(MainWindow.class);
+
   protected CardLayout switcherLayout;
   protected JPanel switcherPanel;
   protected LiteStatusBar statusBar;
@@ -83,8 +88,7 @@ public class MainWindow extends JFrame {
     try {
       steps.get(currentStep).loadConfiguration(config);
     } catch (Exception e) {
-      e.printStackTrace();
-      JOptionPane.showMessageDialog(this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
+      logAndShow(this, e);
     }
   }
 
@@ -92,6 +96,10 @@ public class MainWindow extends JFrame {
     TaskStatusTextListener listener = new TaskStatusTextListener() {
       @Override
       public void statusChanged(Object src, String text) {
+        if (text != null) {
+          LOGGER.info(text);
+        }
+
         statusBar.setStatusText(text);
       }
     };
@@ -109,8 +117,7 @@ public class MainWindow extends JFrame {
       current.saveToConfiguration(config);
       next.loadConfiguration(config);
     } catch (Exception e) {
-      e.printStackTrace();
-      JOptionPane.showMessageDialog(this, e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
+      logAndShow(this, e);
     }
 
     currentStep++;

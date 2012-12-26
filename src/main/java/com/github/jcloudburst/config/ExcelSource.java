@@ -34,6 +34,11 @@ public class ExcelSource implements Cloneable {
   }
 
   @Override
+  public String toString() {
+    return String.format("Excel[file=%s,sheet=%s,hasHeader=%b]", file, excelSheet, hasHeaderRow);
+  }
+
+  @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;

@@ -16,12 +16,16 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
 
+import org.apache.log4j.Logger;
+
 import net.miginfocom.swing.MigLayout;
 
 import com.github.jcloudburst.config.ImportConfig;
 
 @SuppressWarnings("serial")
 public class DatabaseConnectionPanel extends ConfigStepPanel {
+  private static final Logger LOGGER = Logger.getLogger(DatabaseConnectionPanel.class);
+
   private JTextField jdbcUrlField;
   private JTextField jdbcUsernameField;
   private JPasswordField jdbcPasswordField;
@@ -114,6 +118,7 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
         try (Connection connection = DriverManager.getConnection(url, user, pass)) {
           Statement statement = connection.createStatement();
           statement.setQueryTimeout(1);
+          LOGGER.debug(query);
           ResultSet set = statement.executeQuery(query);
           set.next();
         }
@@ -129,10 +134,11 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
         String status = String.format("connection to %s (%s) ", url, user.isEmpty() ? "no user" : "as " + user);
         try {
           get();
+          LOGGER.debug("connection successful");
           status += "is successful!";
           setStatus(status, true);
         } catch (Exception e) {
-          e.printStackTrace();
+          LOGGER.warn("connection verify failed", e);
           status += "failed: " + e.getMessage();
           setStatus(status, false);
         }
