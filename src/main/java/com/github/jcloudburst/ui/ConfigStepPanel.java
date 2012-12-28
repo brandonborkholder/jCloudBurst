@@ -33,6 +33,10 @@ public abstract class ConfigStepPanel extends JPanel {
     this.config = config;
     flushUIToConfiguration();
   }
+  
+  protected String getExplanationText() {
+    return null;
+  }
 
   protected abstract void flushUIToConfiguration() throws IllegalStateException;
 

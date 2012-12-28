@@ -5,6 +5,8 @@ import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.IOException;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -37,11 +40,11 @@ import com.github.jcloudburst.ColumnsMapGuesser;
 import com.github.jcloudburst.FieldScraper;
 import com.github.jcloudburst.config.ColumnSource;
 import com.github.jcloudburst.config.TableRef;
-import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
+import com.github.jcloudburst.ui.TableChooserPanel.TableState;
 
 @SuppressWarnings("serial")
 public class ColumnMapperPanel extends ConfigStepPanel {
-  private ConnectionState lastColumnsState;
+  private TableState lastColumnsState;
   private List<ColumnInfo> columns;
 
   private List<ColumnSource> columnSources;
@@ -49,8 +52,18 @@ public class ColumnMapperPanel extends ConfigStepPanel {
   private FileSourceState lastFieldState;
   private List<FieldInfo> fields;
 
+  private JButton autoMatchButton;
+
   public ColumnMapperPanel() {
     super("Columns");
+
+    autoMatchButton = new JButton("Auto-match");
+    autoMatchButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        guessMapping();
+      }
+    });
   }
 
   @Override
@@ -67,14 +80,27 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     }
   }
 
+  @Override
+  protected String getExplanationText() {
+    return "Match the database columns to the fields in the source file(s).";
+  }
+
+  private void guessMapping() {
+    config.clearColumnSources();
+
+    ensureHasColumns();
+  }
+
   private void ensureHasColumns() {
-    if (lastColumnsState == null || !lastColumnsState.equals(new ConnectionState(config))) {
+    if (lastColumnsState == null || !lastColumnsState.equals(new TableState(config))) {
       columns = null;
       new SwingWorker<List<ColumnInfo>, Void>() {
         @Override
         protected List<ColumnInfo> doInBackground() throws Exception {
           setBackgroundTaskStatus("fetching table columns from database ...");
-          return getColumns();
+          List<ColumnInfo> columns = getColumns();
+          lastColumnsState = new TableState(config);
+          return columns;
         }
 
         @Override
@@ -118,7 +144,9 @@ public class ColumnMapperPanel extends ConfigStepPanel {
         @Override
         protected List<FieldInfo> doInBackground() throws Exception {
           setBackgroundTaskStatus("fetching fields from the files ...");
-          return getFields();
+          List<FieldInfo> fields = getFields();
+          lastFieldState = new FileSourceState(config);
+          return fields;
         }
 
         @Override
@@ -170,6 +198,8 @@ public class ColumnMapperPanel extends ConfigStepPanel {
     for (int index = 0; index < columnSources.size(); index++) {
       addColumn(index, listPanel);
     }
+
+    listPanel.add(autoMatchButton, "span,right");
 
     setLayout(new BorderLayout());
     add(new JScrollPane(listPanel), BorderLayout.CENTER);
@@ -285,7 +315,7 @@ public class ColumnMapperPanel extends ConfigStepPanel {
 
     for (int i = 0; i < columns.size(); i++) {
       ColumnSource src = config.getColumnSource(i);
-      if (src != null && src.isValid()) {
+      if (src.isValid()) {
         columnSources.set(i, src);
       }
     }

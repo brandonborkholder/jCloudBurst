@@ -173,7 +173,7 @@ public class ImportConfig implements Cloneable {
     if (idx < 0) {
       idx = columns.size();
       columns.add(name);
-      columnSources.add(null);
+      columnSources.add(new ColumnSource());
     }
 
     setColumnSource(idx, source);
@@ -181,6 +181,14 @@ public class ImportConfig implements Cloneable {
 
   public void setColumnSource(int index, ColumnSource source) {
     columnSources.set(index, source);
+    colMappingVersion++;
+  }
+
+  public void clearColumnSources() {
+    for (int i = 0; i < columnSources.size(); i++) {
+      columnSources.set(i, new ColumnSource());
+    }
+
     colMappingVersion++;
   }
 

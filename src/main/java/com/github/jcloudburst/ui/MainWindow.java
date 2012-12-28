@@ -1,6 +1,9 @@
 package com.github.jcloudburst.ui;
 
 import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
+import static javax.swing.BorderFactory.createCompoundBorder;
+import static javax.swing.BorderFactory.createEmptyBorder;
+import static javax.swing.BorderFactory.createEtchedBorder;
 
 import java.awt.CardLayout;
 import java.awt.Dimension;
@@ -14,7 +17,9 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
 import net.miginfocom.swing.MigLayout;
@@ -27,17 +32,18 @@ import com.github.jcloudburst.config.ImportConfig;
 public class MainWindow extends JFrame {
   private static final Logger LOGGER = Logger.getLogger(MainWindow.class);
 
-  protected CardLayout switcherLayout;
-  protected JPanel switcherPanel;
-  protected LiteStatusBar statusBar;
+  private CardLayout switcherLayout;
+  private JPanel switcherPanel;
+  private LiteStatusBar statusBar;
 
-  protected ImportConfig config;
+  private ImportConfig config;
 
-  protected int currentStep;
-  protected List<ConfigStepPanel> steps;
+  private int currentStep;
+  private JLabel instructionsLabel;
+  private List<ConfigStepPanel> steps;
 
-  protected JButton nextButton;
-  protected JButton backButton;
+  private JButton nextButton;
+  private JButton backButton;
 
   public MainWindow(ImportConfig config) {
     setTitle("CloudBurst");
@@ -54,6 +60,10 @@ public class MainWindow extends JFrame {
     steps.add(new FileSourceChooser());
     steps.add(new ColumnMapperPanel());
     steps.add(new ProgressPanel());
+
+    instructionsLabel = new JLabel();
+    instructionsLabel.setBorder(createCompoundBorder(createEtchedBorder(), createEmptyBorder(5, 5, 5, 5)));
+    instructionsLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
     attachStatusBarListener();
 
@@ -77,7 +87,8 @@ public class MainWindow extends JFrame {
     currentStep = 0;
     updateUIForCurrentStep();
 
-    setLayout(new MigLayout("", "[grow|grow]", "[grow||20px]"));
+    setLayout(new MigLayout("", "[grow|grow]", "[|grow||20px:20px]"));
+    add(instructionsLabel, "span,grow,wrap");
     add(switcherPanel, "span,grow,wrap");
     add(backButton, "left");
     add(nextButton, "right,wrap");
@@ -114,11 +125,11 @@ public class MainWindow extends JFrame {
     try {
       current.saveToConfiguration(config);
       next.loadConfiguration(config);
+      currentStep++;
     } catch (Exception e) {
       logAndShow(this, e);
     }
 
-    currentStep++;
     updateUIForCurrentStep();
   }
 
@@ -131,6 +142,8 @@ public class MainWindow extends JFrame {
     switcherLayout.show(switcherPanel, String.valueOf(currentStep));
 
     ConfigStepPanel active = steps.get(currentStep);
+    instructionsLabel.setText("<html>" + active.getExplanationText() + "</html>");
+
     Action nextAction = active.getCustomNextAction();
     if (nextAction == null) {
       nextAction = new NextAction();

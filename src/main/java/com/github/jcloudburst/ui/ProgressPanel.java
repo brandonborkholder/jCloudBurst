@@ -64,6 +64,11 @@ public class ProgressPanel extends ConfigStepPanel {
   }
 
   @Override
+  protected String getExplanationText() {
+    return "Press the Import button to start the import process.";
+  }
+
+  @Override
   protected Action getCustomNextAction() {
     return new AbstractAction("Import") {
       @Override

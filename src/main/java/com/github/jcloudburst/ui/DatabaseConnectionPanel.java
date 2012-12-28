@@ -16,9 +16,9 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
 
-import org.apache.log4j.Logger;
-
 import net.miginfocom.swing.MigLayout;
+
+import org.apache.log4j.Logger;
 
 import com.github.jcloudburst.config.ImportConfig;
 
@@ -54,7 +54,7 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
 
     setLayout(new MigLayout("", "[|grow]"));
 
-    add(new JLabel("URL"), "right");
+    add(new JLabel("JDBC URL"), "right");
     add(jdbcUrlField, "grow,wrap");
     add(new JLabel("Username"), "right");
     add(jdbcUsernameField, "grow,wrap");
@@ -65,6 +65,11 @@ public class DatabaseConnectionPanel extends ConfigStepPanel {
 
     add(testButton, "right");
     add(connectionStatusLabel, "grow");
+  }
+
+  @Override
+  protected String getExplanationText() {
+    return "Enter the JDBC connection information to select the destination database.";
   }
 
   @Override

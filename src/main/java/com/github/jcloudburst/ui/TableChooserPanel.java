@@ -27,6 +27,7 @@ import javax.swing.table.AbstractTableModel;
 
 import net.miginfocom.swing.MigLayout;
 
+import com.github.jcloudburst.config.ImportConfig;
 import com.github.jcloudburst.config.TableRef;
 import com.github.jcloudburst.ui.DatabaseConnectionPanel.ConnectionState;
 
@@ -63,6 +64,11 @@ public class TableChooserPanel extends ConfigStepPanel {
     add(new JScrollPane(tableList), "grow");
     add(new JScrollPane(columnsTable), "grow,wrap");
     add(truncateCheckbox, "grow");
+  }
+
+  @Override
+  protected String getExplanationText() {
+    return "Select the database table where the rows will be inserted.";
   }
 
   @Override
@@ -241,6 +247,18 @@ public class TableChooserPanel extends ConfigStepPanel {
       }
 
       return null;
+    }
+  }
+
+  public static class TableState extends ConnectionState {
+    public TableState(ImportConfig c) {
+      super(c);
+      add("Table", c.getTable().toString());
+    }
+
+    public TableState(String url, String user, String pass, String table) {
+      super(url, user, pass);
+      add("Table", table);
     }
   }
 }
