@@ -1,20 +1,25 @@
 package com.github.jcloudburst.ui;
 
 import static com.github.jcloudburst.ui.ExceptionUtils.logAndShow;
+import static java.lang.String.format;
 import static javax.swing.BorderFactory.createCompoundBorder;
 import static javax.swing.BorderFactory.createEmptyBorder;
 import static javax.swing.BorderFactory.createEtchedBorder;
 
 import java.awt.CardLayout;
 import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -45,8 +50,17 @@ public class MainWindow extends JFrame {
   private JButton nextButton;
   private JButton backButton;
 
+  private JLabel leftLabel;
+
   public MainWindow(ImportConfig config) {
     setTitle("CloudBurst");
+
+    try {
+      setIconImage(ImageIO.read(MainWindow.class.getClassLoader().getResource("icons/cbicon.png")));
+    } catch (IOException ex) {
+      LOGGER.error("Error loading icon", ex);
+    }
+
     this.config = config;
 
     switcherLayout = new CardLayout();
@@ -63,7 +77,16 @@ public class MainWindow extends JFrame {
 
     instructionsLabel = new JLabel();
     instructionsLabel.setBorder(createCompoundBorder(createEtchedBorder(), createEmptyBorder(5, 5, 5, 5)));
-    instructionsLabel.setHorizontalAlignment(SwingConstants.CENTER);
+    instructionsLabel.setVerticalAlignment(SwingConstants.TOP);
+
+    int logoWidth = 150;
+    try {
+      Image logo = ImageIO.read(MainWindow.class.getClassLoader().getResource("icons/cblogo.png"));
+      logoWidth = logo.getWidth(null);
+      leftLabel = new JLabel(new ImageIcon(logo));
+    } catch (IOException ex) {
+      LOGGER.error("Error loading logo", ex);
+    }
 
     attachStatusBarListener();
 
@@ -87,9 +110,10 @@ public class MainWindow extends JFrame {
     currentStep = 0;
     updateUIForCurrentStep();
 
-    setLayout(new MigLayout("", "[grow|grow]", "[|grow||20px:20px]"));
-    add(instructionsLabel, "span,grow,wrap");
-    add(switcherPanel, "span,grow,wrap");
+    setLayout(new MigLayout("", format("[%dpx|grow]", logoWidth), "[|grow||20px:20px]"));
+    add(leftLabel, "");
+    add(switcherPanel, "grow,wrap,spany 2");
+    add(instructionsLabel, "grow,wrap");
     add(backButton, "left");
     add(nextButton, "right,wrap");
     add(statusBar, "span,grow");

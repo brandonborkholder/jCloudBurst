@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 
 import javax.swing.JFrame;
+import javax.swing.UIManager;
 
 import com.github.jcloudburst.config.ColumnSource;
 import com.github.jcloudburst.config.DelimitedSource;
@@ -32,6 +33,8 @@ public class TestGUI {
 
     config.setColumnSource("a_column", new ColumnSource().withFileFieldName("A column"));
     config.setColumnSource("b_column", new ColumnSource().withFileFieldIndex(1));
+    
+    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
     MainWindow window = new MainWindow(config);
     window.setPreferredSize(new Dimension(1024, 768));
